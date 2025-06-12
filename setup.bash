@@ -57,12 +57,16 @@ fi
 # change default conda dir to prevent home directory from filling up
 mkdir -p /scratch/${CLUSTER}/${USER}/.conda/pkgs
 mkdir -p /scratch/${CLUSTER}/${USER}/.conda/envs
+module purge
+module load conda
 conda config --add pkgs_dirs /scratch/${CLUSTER}/${USER}/.conda/pkgs
 conda config --add envs_dirs /scratch/${CLUSTER}/${USER}/.conda/envs
 
 # add auto env export script to crontab
 echo -ne "Setting up automatic conda env export...\t\t"
-mkdir $HOME/ymls
+if [[ ! -d $HOME/ymls ]]; then
+	mkdir $HOME/ymls
+fi
 ssh $USER@login01.gautschi.rcac.purdue.edu 'crontab < $HOME/rcac-utils/.crontab'
 echo -e "[${green}INFO${nc}] Automatic conda environment export set up. Export will run at 23:45 everyday and YML files will be saved in $HOME/ymls"
 echo -e "[${green}DONE${nc}]"
