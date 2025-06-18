@@ -44,14 +44,16 @@ usage() {
 YML_FILENAME=environment.yml
 YML_PATH=$HOME/rcac-utils
 ENV_NAME=environment
+REINSTALL=""
 
 # read args
-while getopts "hf:p:n:" opts; do
+while getopts "hf:p:n:R" opts; do
 	case "${opts}" in
 		h)	usage;;
 		f)	YML_FILENAME=$OPTARG;;
         p)  YML_PATH=$OPTARG;;
         n)  ENV_NAME=$OPTARG;;
+        R)  REINSTALL="true";;
 		*)	usage;;
 	esac
 done
@@ -85,6 +87,10 @@ fi
 if ! grep -q "/scratch/${CLUSTER}/${USER}/.conda/pkgs" "$HOME/.condarc"; then
     conda config --add pkgs_dirs /scratch/${CLUSTER}/${USER}/.conda/pkgs
     conda config --add envs_dirs /scratch/${CLUSTER}/${USER}/.conda/envs
+fi
+
+if [ $REINSTALL]; then
+    YML_PATH=$HOME/ymls
 fi
 
 # create env
