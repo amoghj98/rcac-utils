@@ -155,6 +155,9 @@ MAX_CPUS_PER_GPU=$(($DIV/$((${CLUSTER}"_gpu_"${PARTITION}))))
 if [[ $REQ_CPUS_PER_GPU -gt $MAX_CPUS_PER_GPU ]] && [[ $PARTITION == "cocosys" ]]; then
 	echo -e "[${yellow}WARNING${nc}] Requested number of CPUs per GPU exceeds allowed threshold. Clamping CPU count at threshold value of ${MAX_CPUS_PER_GPU} CPUs/GPU"
 	CPUS_PER_GPU=$MAX_CPUS_PER_GPU
+elif [[ $REQ_CPUS_PER_GPU -eq 0 ]]; then
+	echo -e "[${yellow}WARNING${nc}] Requested number of CPUs is less than the requested number of GPUs. Setting CPU count to ${N_GPUS}"
+	CPUS_PER_GPU=$((1))
 else
 	CPUS_PER_GPU=$REQ_CPUS_PER_GPU
 fi
