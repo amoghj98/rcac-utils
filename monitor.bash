@@ -59,18 +59,18 @@ set -- $(stty size) #$1=rows, $2=columns
 
 # create new session
 tmux new-session -s $SESSION_NAME -n $WINDOW_NAME -d -x "$2" -y "$(($1 - 1))"
-tmux send-keys -t $SESSION_NAME 'watch -n 10 squeue -u $USER' C-m
+tmux send-keys -t $SESSION_NAME 'watch -n 60 squeue -u $USER' C-m
 
 #rename pane 0
-tmux set -p @mytitle "squeue"
+tmux set -p @mytitle "user_jobs"
 
 # split window vertically
 tmux split-window -v
 tmux send-keys -t $SESSION_NAME 'squeue -a -p cocosys' C-m
-tmux send-keys -t $SESSION_NAME 'squeue -a -p ai' C-m
+# tmux send-keys -t $SESSION_NAME 'squeue -a -p ai' C-m
 
 #rename pane 1
-tmux set -p @mytitle "cpu_load"
+tmux set -p @mytitle "cluster_load"
 
 # attach session
 tmux attach -t $SESSION_NAME
