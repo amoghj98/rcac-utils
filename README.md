@@ -121,7 +121,7 @@ This wrapper script simplifies job launching by accepting user args in easy-to-u
 
 Jobs are launched using either the <code>sbatch</code> or <code>salloc</code> commands depending on whether or not an intercative shell is desired. Users may also modify the script to use the <code>srun</code> command. Both <code>sbatch</code> and <code>srun</code> accept the same set of parameters.  The main difference is that <code>srun</code> is interactive and blocking (you get the result in your terminal and you cannot write other commands until it is finished), while <code>sbatch</code> is batch processing and non-blocking (results are written to a file and you can submit other commands right away).
 
-If you use <code>srun</code> in the background with the & sign, then you remove the 'blocking' feature of <code>srun</code>, which becomes interactive but non-blocking. It is still interactive though, meaning that the output will clutter your terminal, and the <code>srun</code> processes are linked to your terminal. If you disconnect, you will loose control over them, or they might be killed (depending on whether they use stdout or not basically). And they will be killed if the machine to which you connect to submit jobs is rebooted.
+If you use <code>srun</code> in the background with the & operator, then you remove the 'blocking' feature of <code>srun</code>, which becomes interactive but non-blocking. It is still interactive though, meaning that the output will clutter your terminal, and the <code>srun</code> processes are linked to your terminal. If you disconnect, you will loose control over them, or they might be killed (depending on whether they use stdout or not basically). And they will be killed if the machine to which you connect to submit jobs is rebooted.
 
 If you use <code>sbatch</code>, you submit your job and it is handled by Slurm ; you can disconnect, kill your terminal, etc. with no consequence. Your job is no longer linked to a running process.
 
@@ -238,7 +238,7 @@ bash joblauncher.bash -j jobsubmissionscript.sub -t bash -d ~/test/ -f file.bash
 Let us assume that, for whatever reason, the user needs to launch a job via an interactive terminal similar to the way jobs are launched on local GPU machines. Assuming the user wants to name the job "jobname", and that "jobname" requires 1 GPU and 14 CPU cores, the desired interactive job can be launched using
 
 ```
-bash joblauncher.bash -n jobname -g 1 -c 14
+bash joblauncher.bash -n jobname -g 1 -c 14 -i
 ```
 
 ## Common Utilities
