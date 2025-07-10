@@ -27,7 +27,7 @@
 #SBATCH -A kaushik
 #SBATCH --nodes=1 
 #SBATCH --time=6:00:00
-#SBATCH --job-name $(whoami)_%j
+#SBATCH --job-name DEFAULT
 #SBATCH --gpus-per-node=1
 #SBATCH --output=${HOME}/joboutput/${SLURM_JOB_NAME}_%j.out
 #SBATCH --error=${HOME}/joboutput/${SLURM_JOB_NAME}_%j.out
@@ -42,6 +42,11 @@
 function sig_handler(){
 	kill -SIGUSR1 $PID
 }
+
+# handle job renaming for default name jobs
+if [[ $SLURM_JOB_NAME == "DEFAULT" ]]; then
+	scontrol update job=$SLURM_JOB_ID JobName=$(whoami)_$SLURM_JOB_ID
+fi
 
 # trap SIGUSR1 coming from sbatch and pass to python script
 trap 'sig_handler' SIGUSR1
