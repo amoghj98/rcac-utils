@@ -39,7 +39,7 @@ MAIL_TYPE=BEGIN,END,FAIL,TIME_LIMIT_90
 INTERACTIVE=""
 
 # file name setup
-JOB_NAME="${USER}_%j"
+JOB_NAME=""
 LOG_PATH="${HOME}/joboutput/"
 
 # usage help message
@@ -174,6 +174,9 @@ fi
 # mail arg construction
 MAIL_ARGS="--mail-type=${MAIL_TYPE} --mail-user=${USER}@purdue.edu"
 
+# job name construction
+USR_SPEC_JOB_NAME="--job-name=${JOB_NAME}"
+
 # call to sbatch to launch the job
 # sbatch args are arranged thus:
 # sbatch \
@@ -195,13 +198,14 @@ if [[ ! $INTERACTIVE ]]; then
 	sbatch \
 		-p $PARTITION -q $QOS_LEVEL \
 		${MAIL:+"$MAIL_ARGS"} \
-		--job-name=$JOB_NAME --output="${OUT_FILE}.log" --error="${ERR_FILE}.log" \
+		${JOB_NAME:+"$USR_SPEC_JOB_NAME"} \
+		--output="${OUT_FILE}.log" --error="${ERR_FILE}.log" \
 		--gpus-per-node=$N_GPUS --gres=gpu:$N_GPUS -t $MAX_TIME --signal=B:SIGUSR1@${SIG_INTERVAL} --nodes=$N_NODES --cpus-per-gpu=$CPUS_PER_GPU -A $QUEUE \
 		$JOB_FILE_PATH/${JOB_SUBMISSION_SCRIPT} -e $ENV_NAME -t $SCRIPT_TYPE -d $SCRIPT_DIR -f $SCRIPT_FILE
 else
 	salloc \
 		-p $PARTITION -q $QOS_LEVEL \
 		${MAIL:+"$MAIL_ARGS"} \
-		--job-name=$JOB_NAME \
+		${JOB_NAME:+"$USR_SPEC_JOB_NAME"} \
 		--gpus-per-node=$N_GPUS --gres=gpu:$N_GPUS -t $MAX_TIME --signal=R:SIGUSR1@${SIG_INTERVAL} --nodes=$N_NODES --cpus-per-gpu=$CPUS_PER_GPU -A $QUEUE
 fi
