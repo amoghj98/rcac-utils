@@ -27,6 +27,12 @@
 # script vars. DO NOT MODIFY
 FLAG=false
 
+
+#
+module purge
+module load conda
+module load cuda
+
 #
 echo -e "Parsing paths...\t"
 
