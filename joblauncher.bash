@@ -25,7 +25,7 @@
 
 
 # necessary imports
-source config_rcac.bash
+source config_slurm.bash
 
 # system constants. DO NOT MODIFY
 JOB_FILE_PATH=$CONFIG_PATH
@@ -72,7 +72,7 @@ PARTITION=cocosys
 QOS_LEVEL=normal
 MAX_TIME=6:00:00
 ENV_NAME=base
-JOB_SUBMISSION_SCRIPT=jobsubmissionscript.sub
+JOB_SUBMISSION_SCRIPT=jobsubmissionscript.slurm
 SCRIPT_TYPE=python
 SCRIPT_DIR=$HOME/rcac-utils
 SCRIPT_FILE=helloWorld.py
@@ -114,15 +114,24 @@ if [[ ! " ${SUPPORTED_SCRIPTS[@]} " =~ " $SCRIPT_TYPE " ]]; then
 	exit 1
 fi
 
-SUPPORTED_QUEUES=("kaushik" "cocosys")
+#
+if [[ "gautschi" == *"$CLUSTER"* ]]; then
+	SUPPORTED_QUEUES=("kaushik" "cocosys")
+	SUPPORTED_QOS_LEVELS=("normal" "preemptible")
+else
+	SUPPORTED_QUEUES=("batch")
+	SUPPORTED_QOS_LEVELS=("normal" "preemptible")
+	N_GPUS=$((0))
+	PARTITION=batch
+fi
+
 if [[ ! " ${SUPPORTED_QUEUES[@]} " =~ " $QUEUE " ]]; then
-	echo -e "[${red}FATAL${nc}] Unsupported queue"
+	echo -e "[${red}FATAL${nc}] Unsupported queue\nSupported Queues: ${SUPPORTED_QUEUES[@]}"
 	exit 1
 fi
 
-SUPPORTED_QOS_LEVELS=("normal" "preemptible")
 if [[ ! " ${SUPPORTED_QOS_LEVELS[@]} " =~ " $QOS_LEVEL " ]]; then
-	echo -e "[${red}FATAL${nc}] Unsupported QoS"
+	echo -e "[${red}FATAL${nc}] Unsupported QoS\nSupported QoS Levels: ${SUPPORTED_QOS_LEVELS[@]}"
 	exit 1
 fi
 
@@ -136,38 +145,55 @@ if [[ $N_GPUS -gt 0 ]] && [[ $((${CLUSTER}"_gpu_"${PARTITION})) -eq 0 ]]; then
 	exit 1
 fi
 
-# essential computation
-DIV=$((${CLUSTER}"_cpu_"${PARTITION}))
-N_NODES=$(((($N_CPUS+$DIV-1))/$DIV))
+if [[ "gautschi" == *"$CLUSTER"* ]]; then
+	# essential computation
+	DIV=$((${CLUSTER}"_cpu_"${PARTITION}))
+	N_NODES=$(((($N_CPUS+$DIV-1))/$DIV))
 
-# control requested CPU count
-if [[ $N_GPUS -gt 0 ]]; then
-	REQ_CPUS_PER_GPU=$(($N_CPUS/$N_GPUS))
-else
-	CPU_ONLY_PARTITIONS=("highmem")
-	if [[ ! " ${CPU_ONLY_PARTITIONS[@]} " =~ " $PARTITION " ]]; then
-		# does not support cpu-only jobs on partitions other than highmem right now, TODO
-		echo -e "[${red}FATAL${nc}] Launching CPU-only jobs not supported on partition $PARTITION. CPU-only jobs can only be launched on partition(s): $CPU_ONLY_PARTITIONS"
-		exit -1
+	# control requested CPU count
+	if [[ $N_GPUS -gt 0 ]]; then
+		REQ_CPUS_PER_GPU=$(($N_CPUS/$N_GPUS))
+	else
+		CPU_ONLY_PARTITIONS=("highmem")
+		if [[ ! " ${CPU_ONLY_PARTITIONS[@]} " =~ " $PARTITION " ]]; then
+			# does not support cpu-only jobs on partitions other than highmem right now, TODO
+			echo -e "[${red}FATAL${nc}] Launching CPU-only jobs not supported on partition $PARTITION. CPU-only jobs can only be launched on partition(s): $CPU_ONLY_PARTITIONS"
+			exit -1
+		fi
 	fi
-fi
-MAX_CPUS_PER_GPU=$(($DIV/$((${CLUSTER}"_gpu_"${PARTITION}))))
-if [[ $REQ_CPUS_PER_GPU -gt $MAX_CPUS_PER_GPU ]] && [[ $PARTITION == "cocosys" ]]; then
-	echo -e "[${yellow}WARNING${nc}] Requested number of CPUs per GPU exceeds allowed threshold. Clamping CPU count at threshold value of ${MAX_CPUS_PER_GPU} CPUs/GPU"
-	CPUS_PER_GPU=$MAX_CPUS_PER_GPU
-elif [[ $REQ_CPUS_PER_GPU -eq 0 ]]; then
-	echo -e "[${yellow}WARNING${nc}] Requested number of CPUs is less than the requested number of GPUs. Setting CPU count to ${N_GPUS}"
-	CPUS_PER_GPU=$((1))
-else
-	CPUS_PER_GPU=$REQ_CPUS_PER_GPU
-fi
+	MAX_CPUS_PER_GPU=$(($DIV/$((${CLUSTER}"_gpu_"${PARTITION}))))
+	if [[ $REQ_CPUS_PER_GPU -gt $MAX_CPUS_PER_GPU ]] && [[ $PARTITION == "cocosys" ]]; then
+		echo -e "[${yellow}WARNING${nc}] Requested number of CPUs per GPU exceeds allowed threshold. Clamping CPU count at threshold value of ${MAX_CPUS_PER_GPU} CPUs/GPU"
+		CPUS_PER_GPU=$MAX_CPUS_PER_GPU
+	elif [[ $REQ_CPUS_PER_GPU -eq 0 ]]; then
+		echo -e "[${yellow}WARNING${nc}] Requested number of CPUs is less than the requested number of GPUs. Setting CPU count to ${N_GPUS}"
+		CPUS_PER_GPU=$((1))
+	else
+		CPUS_PER_GPU=$REQ_CPUS_PER_GPU
+	fi
 
-# protect compute resources!
-if [[ $N_NODES -ge 2 ]]; then
-	read -p "$( echo -e "["${yellow}"WARNING"${nc}"] The requested number of tasks requires more than one node. MPI-enabled code necessary to run multi-node workloads. Non-MPI code will result in wasted compute resources. Is your code MPI-enabled? (y/n): ")" confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || FLAG=true
-	if $FLAG; then
-		echo -e "[${red}FATAL${nc}] Attempted multi-node run with non-MPI workload. Exiting..."
-		exit 1
+	# protect compute resources!
+	if [[ $N_NODES -ge 2 ]]; then
+		read -p "$( echo -e "["${yellow}"WARNING"${nc}"] The requested number of tasks requires more than one node. MPI-enabled code necessary to run multi-node workloads. Non-MPI code will result in wasted compute resources. Is your code MPI-enabled? (y/n): ")" confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || FLAG=true
+		if $FLAG; then
+			echo -e "[${red}FATAL${nc}] Attempted multi-node run with non-MPI workload. Exiting..."
+			exit 1
+		fi
+	fi
+else
+	# essential computation
+	DIV=$((${CLUSTER}"_cpu_"${PARTITION}))
+	N_NODES=$(((($N_CPUS+$DIV-1))/$DIV))
+
+	# no multi-node jobs
+	if [[ $N_NODES -gt 1 ]]; then
+		echo -e "[${red}FATAL${nc}] Jobs on NRL HPC clusters can not request more than one full node. Reduce CPU request to <= ${DIV} and retry."
+	fi
+	# soft restrictions on cocosys clusters (enforce only 256 core restriction here, other restrictions based on priority will be enforced by mgmt scripts)
+	if [[ "cocosys" == *"$CLUSTER"* ]]; then
+		if [[ $N_CPUS -gt 256 ]]; then
+			echo -e "[${red}FATAL${nc}] Jobs on CoCoSys HPC clusters can not request more than 256 CPU cores. Reduce CPU request and retry."
+		fi
 	fi
 fi
 
@@ -194,18 +220,37 @@ USR_SPEC_JOB_NAME="--job-name=${JOB_NAME}"
 #	-A [QUEUE] : Name of queue to submit job to. H200s are accessed using queue "cocosys". NRL's private queue is named "kaushik"
 #
 #	For more info about sbatch, consult the sbatch man page using "man sbatch"
-if [[ ! $INTERACTIVE ]]; then
-	sbatch \
-		-p $PARTITION -q $QOS_LEVEL \
-		${MAIL:+"$MAIL_ARGS"} \
-		${JOB_NAME:+"$USR_SPEC_JOB_NAME"} \
-		--output="${OUT_FILE}.log" --error="${ERR_FILE}.log" \
-		--gpus-per-node=$N_GPUS --gres=gpu:$N_GPUS -t $MAX_TIME --signal=B:SIGUSR1@${SIG_INTERVAL} --nodes=$N_NODES --cpus-per-gpu=$CPUS_PER_GPU -A $QUEUE \
-		$JOB_FILE_PATH/${JOB_SUBMISSION_SCRIPT} -e $ENV_NAME -t $SCRIPT_TYPE -d $SCRIPT_DIR -f $SCRIPT_FILE
+
+if [[ "gautschi" == *"$CLUSTER"* ]]; then
+	if [[ ! $INTERACTIVE ]]; then
+		sbatch \
+			-p $PARTITION -q $QOS_LEVEL \
+			${MAIL:+"$MAIL_ARGS"} \
+			${JOB_NAME:+"$USR_SPEC_JOB_NAME"} \
+			--output="${OUT_FILE}.log" --error="${ERR_FILE}.log" \
+			--gpus-per-node=$N_GPUS --gres=gpu:$N_GPUS -t $MAX_TIME --signal=B:SIGUSR1@${SIG_INTERVAL} --nodes=$N_NODES --cpus-per-gpu=$CPUS_PER_GPU -A $QUEUE \
+			$JOB_FILE_PATH/${JOB_SUBMISSION_SCRIPT} -e $ENV_NAME -t $SCRIPT_TYPE -d $SCRIPT_DIR -f $SCRIPT_FILE
+	else
+		salloc \
+			-p $PARTITION -q $QOS_LEVEL \
+			${MAIL:+"$MAIL_ARGS"} \
+			${JOB_NAME:+"$USR_SPEC_JOB_NAME"} \
+			--gpus-per-node=$N_GPUS --gres=gpu:$N_GPUS -t $MAX_TIME --signal=R:SIGUSR1@${SIG_INTERVAL} --nodes=$N_NODES --cpus-per-gpu=$CPUS_PER_GPU -A $QUEUE
+	fi
 else
-	salloc \
-		-p $PARTITION -q $QOS_LEVEL \
-		${MAIL:+"$MAIL_ARGS"} \
-		${JOB_NAME:+"$USR_SPEC_JOB_NAME"} \
-		--gpus-per-node=$N_GPUS --gres=gpu:$N_GPUS -t $MAX_TIME --signal=R:SIGUSR1@${SIG_INTERVAL} --nodes=$N_NODES --cpus-per-gpu=$CPUS_PER_GPU -A $QUEUE
+	if [[ ! $INTERACTIVE ]]; then
+		sbatch \
+			-p $PARTITION \
+			# ${MAIL:+"$MAIL_ARGS"} \
+			${JOB_NAME:+"$USR_SPEC_JOB_NAME"} \
+			--output="${OUT_FILE}.log" --error="${ERR_FILE}.log" \
+			-t $MAX_TIME --signal=B:SIGUSR1@${SIG_INTERVAL} --nodes=$N_NODES --cpus-per-task=$N_CPUS -A $USER \
+			$JOB_FILE_PATH/${JOB_SUBMISSION_SCRIPT} -e $ENV_NAME -t $SCRIPT_TYPE -d $SCRIPT_DIR -f $SCRIPT_FILE
+	else
+		salloc \
+			-p $PARTITION -q $QOS_LEVEL \
+			# ${MAIL:+"$MAIL_ARGS"} \
+			${JOB_NAME:+"$USR_SPEC_JOB_NAME"} \
+			-t $MAX_TIME --signal=R:SIGUSR1@${SIG_INTERVAL} --nodes=$N_NODES --cpus-per-task=$N_CPUS -A $QUEUE
+	fi
 fi

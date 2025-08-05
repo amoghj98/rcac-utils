@@ -38,7 +38,7 @@
 # DO NOT MODIFY THESE SPECIAL COMMENTS
 
 # signal trap and fwding function. DO NOT MODIFY
-# function to fwd SLURM's SIGUSR1 to child process (the python script being executed)
+# function to fwd SLURM's SIGUSR1 to child process (the user script being executed)
 function sig_handler(){
 	kill -SIGUSR1 $PID
 }
@@ -48,7 +48,7 @@ if [[ $SLURM_JOB_NAME == "DEFAULT" ]]; then
 	scontrol update job=$SLURM_JOB_ID JobName=$(whoami)_$SLURM_JOB_ID
 fi
 
-# trap SIGUSR1 coming from sbatch and pass to python script
+# trap SIGUSR1 coming from sbatch and pass to user script
 trap 'sig_handler' SIGUSR1
 
 # Print the hostname of the compute node on which this job is running.
@@ -60,8 +60,8 @@ usage() {
 	echo "-h: Display help message"
 	echo "-e ENV_NAME: Name of the script's conda environment. Defaults to 'base'"
 	echo "-t SCRIPT_TYPE: Type of script to execute. Supported values: bash, python. Defaults to 'python'"
-	echo "-d JOB_SCRIPT_DIR: Absolute path to directory containing the script to be run. Defaults to '${HOME}'"
-	echo "-f SCRIPT_FILE: Name of python file to run. Defaults to helloWorld.py"
+	echo "-d JOB_SCRIPT_DIR: Absolute path to directory containing the script to be run. Defaults to '${HOME}/rcac-utils'"
+	echo "-f SCRIPT_FILE: Name of user file to run. Defaults to helloWorld.py"
 	exit 1;
 }
 
@@ -92,7 +92,7 @@ conda activate $ENV_NAME
 # Change to the directory containing job script
 cd $SCRIPT_DIR
 
-# actual call to your python script (uncomment the desired version, comment the other one)
+# actual call to your script (uncomment the desired version, comment the other one)
 # version 1: simple call, OS signalling from SLURM not implemented
 # $SCRIPT_TYPE $SCRIPT_FILE
 
