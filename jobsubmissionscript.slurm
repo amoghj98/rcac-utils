@@ -28,9 +28,8 @@
 #SBATCH --nodes=1 
 #SBATCH --time=6:00:00
 #SBATCH --job-name DEFAULT
-#SBATCH --gpus-per-node=1
-#SBATCH --output=${HOME}/joboutput/${SLURM_JOB_NAME}_%j.out
-#SBATCH --error=${HOME}/joboutput/${SLURM_JOB_NAME}_%j.out
+#SBATCH --output=${HOME}/joboutput/${SLURM_JOB_NAME}_%j.log
+#SBATCH --error=${HOME}/joboutput/${SLURM_JOB_NAME}_%j.log
 #SBATCH --signal=B:USR1@60
 
 
@@ -42,6 +41,9 @@
 function sig_handler(){
 	kill -SIGUSR1 $PID
 }
+
+# necessary imports
+source config_slurm.bash
 
 # handle job renaming for default name jobs
 if [[ $SLURM_JOB_NAME == "DEFAULT" ]]; then
@@ -84,10 +86,16 @@ while getopts "he:t:d:f:" opts; do
 done
 
 # necessary init
-module purge
-module load conda
-module load cuda
-conda activate $ENV_NAME
+if [[ "gautschi" == *"$CLUSTER"* ]]; then
+	echo "in gautschi!......................."
+	module purge
+	module load conda
+	module load cuda
+	conda activate $ENV_NAME
+else
+	source $HOME/.bashrc
+	conda activate $ENV_NAME
+fi
 
 # Change to the directory containing job script
 cd $SCRIPT_DIR

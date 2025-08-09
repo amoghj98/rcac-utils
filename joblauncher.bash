@@ -107,7 +107,7 @@ OUT_FILE="${LOG_PATH}${JOB_NAME}"
 ERR_FILE="${LOG_PATH}${JOB_NAME}"
 
 # sanity checks
-SUPPORTED_SCRIPTS=("bash" "python")
+SUPPORTED_SCRIPTS=("bash" "python" "python3")
 if [[ ! " ${SUPPORTED_SCRIPTS[@]} " =~ " $SCRIPT_TYPE " ]]; then
 	echo -e "[${red}FATAL${nc}] Unsupported script type"
 	usage
@@ -195,6 +195,10 @@ else
 			echo -e "[${red}FATAL${nc}] Jobs on CoCoSys HPC clusters can not request more than 256 CPU cores. Reduce CPU request and retry."
 		fi
 	fi
+	# modify script dir default value for nano
+	if [[ $SCRIPT_DIR == "$HOME/rcac-utils" ]]; then
+		SCRIPT_DIR=$CONFIG_PATH
+	fi
 fi
 
 # mail arg construction
@@ -241,7 +245,7 @@ else
 	if [[ ! $INTERACTIVE ]]; then
 		sbatch \
 			-p $PARTITION \
-			# ${MAIL:+"$MAIL_ARGS"} \
+			${MAIL:+"$MAIL_ARGS"} \
 			${JOB_NAME:+"$USR_SPEC_JOB_NAME"} \
 			--output="${OUT_FILE}.log" --error="${ERR_FILE}.log" \
 			-t $MAX_TIME --signal=B:SIGUSR1@${SIG_INTERVAL} --nodes=$N_NODES --cpus-per-task=$N_CPUS -A $USER \
@@ -249,7 +253,7 @@ else
 	else
 		salloc \
 			-p $PARTITION -q $QOS_LEVEL \
-			# ${MAIL:+"$MAIL_ARGS"} \
+			${MAIL:+"$MAIL_ARGS"} \
 			${JOB_NAME:+"$USR_SPEC_JOB_NAME"} \
 			-t $MAX_TIME --signal=R:SIGUSR1@${SIG_INTERVAL} --nodes=$N_NODES --cpus-per-task=$N_CPUS -A $QUEUE
 	fi

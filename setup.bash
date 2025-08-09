@@ -48,7 +48,6 @@ else
 	INSTALL_DIR=$(find /home/min/a/${USER} /home/nano01/a/${USER} -name rcac-utils 2>/dev/null)
 fi
 echo -e "[${green}DONE${nc}]"
-echo $INSTALL_DIR
 
 # verify installation
 echo -ne "Verifying rcac-utils installation...\t\t"
@@ -68,7 +67,6 @@ else
 fi
 
 echo -e "[${green}DONE${nc}]"
-echo $INSTALL_DIR
 
 # necessary loading. DO NOT MODIFY
 echo -ne "Loading configs...\t\t\t\t"
@@ -80,7 +78,7 @@ echo -e "[${green}DONE${nc}]"
 # add rcac-utils to $PATH if not already added
 if [[ ! $PATH == *"rcac-utils"* ]]; then
 	echo -ne "Setting up paths...\t\t\t\t"
-	echo 'export PATH="${INSTALL_DIR}/rcac-utils:$PATH"' >> $INSTALL_DIR/.bashrc
+	echo 'export PATH="'${INSTALL_DIR}'/rcac-utils:$PATH"' >> $HOME/.bashrc
 	FLAG=true
 	echo -e "[${green}DONE${nc}]"
 else
@@ -116,5 +114,5 @@ echo -ne "Cleaning up...\t\t\t\t\t"
 echo -e "[${green}DONE${nc}]"
 
 if $FLAG; then
-	echo -e "\n[${green}INFO${nc}] User action required: To complete setup, run\n\n\tsource $INSTALL_DIR/.bashrc\n"
+	echo -e "\n[${green}INFO${nc}] User action required: To complete setup, run\n\n\tsource $HOME/.bashrc\n"
 fi
