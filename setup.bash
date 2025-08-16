@@ -27,6 +27,8 @@
 # script vars. DO NOT MODIFY
 FLAG=false
 
+# load module cmd to prevent weird bug experienced by few folks
+source /etc/profile.d/modules.sh
 
 #
 module purge
@@ -63,8 +65,6 @@ fi
 # change default conda dir to prevent home directory from filling up
 mkdir -p /scratch/${CLUSTER}/${USER}/.conda/pkgs
 mkdir -p /scratch/${CLUSTER}/${USER}/.conda/envs
-module purge
-module load conda
 conda config --add pkgs_dirs /scratch/${CLUSTER}/${USER}/.conda/pkgs
 conda config --add envs_dirs /scratch/${CLUSTER}/${USER}/.conda/envs
 
