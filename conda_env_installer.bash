@@ -32,11 +32,13 @@ FLAG=false
 
 # usage help message
 usage() {
-	echo "usage: $0 [-h] [-f YML_FILENAME] [-p YML_PATH] [-n ENV_NAME]" 1>&2;
+	echo "usage: $0 [-h] [-R] [-f YML_FILENAME] [-p YML_PATH] [-n ENV_NAME] [-P RQMT_TXT_FILE]" 1>&2;
 	echo "-h: Display help message"
+    echo "-R: Re-install env from default yml loaction"
 	echo "-f YML_FILENAME: Name of env yml file. Defaults to 'environment.yml'"
     echo "-p YML_PATH: Path to yml file. Defaults to '${HOME}/rcac-utils'"
     echo "-n ENV_NAME: Name of env to be created. Defaults to 'environment'"
+    echo "-P RQMT_TXT_FILENAME: File with absolute path to requirements.txt file"
 	exit 1;
 }
 
@@ -45,15 +47,17 @@ YML_FILENAME=environment.yml
 YML_PATH=$HOME/rcac-utils
 ENV_NAME=environment
 REINSTALL=""
+PIP_FILE=""
 
 # read args
-while getopts "hf:p:n:R" opts; do
+while getopts "hf:p:n:RP:" opts; do
 	case "${opts}" in
 		h)	usage;;
 		f)	YML_FILENAME=$OPTARG;;
         p)  YML_PATH=$OPTARG;;
         n)  ENV_NAME=$OPTARG;;
         R)  REINSTALL="true";;
+        P)  PIP_FILE=$OPTARG;;
 		*)	usage;;
 	esac
 done
@@ -76,6 +80,8 @@ fi
 module load conda
 # import lmod cuda module to ensure the correct version of pytorch gets installed
 module load cuda
+# import lmod pip module
+module load pip
 
 # ensure conda install dir is in scratch
 if [ ! -d "/scratch/${CLUSTER}/${USER}/.conda" ]; then
@@ -89,11 +95,20 @@ if ! grep -q "/scratch/${CLUSTER}/${USER}/.conda/pkgs" "$HOME/.condarc"; then
     conda config --add envs_dirs /scratch/${CLUSTER}/${USER}/.conda/envs
 fi
 
-if [ $REINSTALL]; then
+if [ $REINSTALL ]; then
     YML_PATH=$HOME/ymls
 fi
 
 # create env
-conda env create -n $ENV_NAME --file $YML_PATH/${YML_FILENAME}
-
+echo -e "[${yellow}INFO${nc}] Installing env..."
+conda env create --prefix /scratch/${CLUSTER}/${USER}/.conda/envs/${ENV_NAME} --file $YML_PATH/${YML_FILENAME}
 echo -e "[${green}DONE${nc}]"
+
+if [[ -f "$PIP_FILE" ]]; then
+    echo -e "[${yellow}INFO${nc}] Installing pip dependencies..."
+    pip install $PIP_FILE
+    echo -e "[${green}DONE${nc}]"
+elif [[ $PIP_FILE ]]; then
+    echo -e "[${red}FATAL${nc}] Specified pip dependency file not found"
+    exit 1
+fi
