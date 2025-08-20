@@ -105,9 +105,11 @@ conda env create --prefix /scratch/${CLUSTER}/${USER}/.conda/envs/${ENV_NAME} --
 echo -e "[${green}DONE${nc}]"
 
 if [[ -f "$PIP_FILE" ]]; then
+    conda activate $ENV_NAME
     echo -e "[${yellow}INFO${nc}] Installing pip dependencies..."
     pip install $PIP_FILE
     echo -e "[${green}DONE${nc}]"
+    conda deactivate
 elif [[ $PIP_FILE ]]; then
     echo -e "[${red}FATAL${nc}] Specified pip dependency file not found"
     exit 1
