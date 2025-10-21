@@ -24,6 +24,9 @@
 # FILENAME:  monitor
 
 
+# load module cmd to prevent weird bug experienced by few folks
+source /etc/profile.d/modules.sh
+
 # system constants. DO NOT MODIFY
 QUEUE=kaushik
 JOB_FILE_PATH=$HOME/rcac-utils

@@ -21,35 +21,29 @@
 # SOFTWARE.
 
 
-# FILENAME:  jobsubmissionfile
-
+# FILENAME:  jobsubmission_array
 
 #SBATCH -A kaushik
 #SBATCH --nodes=1 
 #SBATCH --time=6:00:00
 #SBATCH --job-name DEFAULT
+#SBATCH --array=1-20%5                  # Array range (this creates 20 tasks with IDs from 1 to 20, with max 5 tasks concurrently. Set number of tasks to total number of iterations in loop, 20 in this case)
 #SBATCH --gpus-per-node=1
-#SBATCH --output=${HOME}/joboutput/%x_%j.out
-#SBATCH --error=${HOME}/joboutput/%x_%j.err
+#SBATCH --output=${HOME}/joboutput/${SLURM_JOB_NAME}_%A_%a.out
+#SBATCH --error=${HOME}/joboutput/${SLURM_JOB_NAME}_%A_%a.out
 #SBATCH --signal=B:USR1@60
 
 
 # The sbatch comments above are a special kind of comment that act as arguments to the sbatch command unless superceded by cmd-line args in the launch file.
 # DO NOT MODIFY THESE SPECIAL COMMENTS
 
-# signal trap and fwding function. DO NOT MODIFY
-# function to fwd SLURM's SIGUSR1 to child process (the python script being executed)
-function sig_handler(){
-	kill -SIGUSR1 $PID
-}
-
 # handle job renaming for default name jobs
-if [[ $SLURM_JOB_NAME == "DEFAULT" ]]; then
-	scontrol update job=$SLURM_JOB_ID JobName=$(whoami)_$SLURM_JOB_ID
-fi
+# if [[ $SLURM_JOB_NAME == "DEFAULT" ]]; then
+# 	scontrol update job=$SLURM_JOB_ID JobName=$(whoami)_$SLURM_JOB_ID
+# fi
 
 # trap SIGUSR1 coming from sbatch and pass to python script
-trap 'sig_handler' SIGUSR1
+# trap 'sig_handler' SIGUSR1
 
 # Print the hostname of the compute node on which this job is running.
 echo -e "Hostname: $(/bin/hostname)\n"
@@ -92,11 +86,20 @@ conda activate $ENV_NAME
 # Change to the directory containing job script
 cd $SCRIPT_DIR
 
-# actual call to your python script (uncomment the desired version, comment the other one)
-# version 1: simple call, OS signalling from SLURM not implemented
-# $SCRIPT_TYPE $SCRIPT_FILE
+for SEED in 0 1 2 3;
+do
+	for LR in {-5..-1..1};
+	do
+		lr=$(echo 10^$LR | bc -l)
+		echo $SEED
+		echo $lr
+		# actual call to your python script (uncomment the desired version, comment the other one)
+		# version 1: simple call, OS signalling from SLURM not implemented
+		# $SCRIPT_TYPE $SCRIPT_FILE
 
-# version 2: better call, OS signalling from SLURM enabled (exception catching and handling left to the user)
-$SCRIPT_TYPE $SCRIPT_FILE &
-PID="$!"
-wait "${PID}"
+		# version 2: better call, OS signalling from SLURM enabled (exception catching and handling left to the user)
+		# $SCRIPT_TYPE $SCRIPT_FILE &
+		# PID="$!"
+		# wait "${PID}"
+	done
+done

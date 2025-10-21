@@ -23,6 +23,8 @@
 
 # FILENAME:  joblauncher
 
+# load module cmd to prevent weird bug experienced by few folks
+source /etc/profile.d/modules.sh
 
 # necessary imports
 source config_rcac.bash
@@ -143,13 +145,13 @@ N_NODES=$(((($N_CPUS+$DIV-1))/$DIV))
 # control requested CPU count
 if [[ $N_GPUS -gt 0 ]]; then
 	REQ_CPUS_PER_GPU=$(($N_CPUS/$N_GPUS))
-else
-	CPU_ONLY_PARTITIONS=("highmem")
-	if [[ ! " ${CPU_ONLY_PARTITIONS[@]} " =~ " $PARTITION " ]]; then
-		# does not support cpu-only jobs on partitions other than highmem right now, TODO
-		echo -e "[${red}FATAL${nc}] Launching CPU-only jobs not supported on partition $PARTITION. CPU-only jobs can only be launched on partition(s): $CPU_ONLY_PARTITIONS"
-		exit -1
-	fi
+# else
+# 	CPU_ONLY_PARTITIONS=("highmem")
+# 	if [[ ! " ${CPU_ONLY_PARTITIONS[@]} " =~ " $PARTITION " ]]; then
+# 		# does not support cpu-only jobs on partitions other than highmem right now, TODO
+# 		echo -e "[${red}FATAL${nc}] Launching CPU-only jobs not supported on partition $PARTITION. CPU-only jobs can only be launched on partition(s): $CPU_ONLY_PARTITIONS"
+# 		exit -1
+# 	fi
 fi
 MAX_CPUS_PER_GPU=$(($DIV/$((${CLUSTER}"_gpu_"${PARTITION}))))
 if [[ $REQ_CPUS_PER_GPU -gt $MAX_CPUS_PER_GPU ]] && [[ $PARTITION == "cocosys" ]]; then
@@ -199,7 +201,7 @@ if [[ ! $INTERACTIVE ]]; then
 		-p $PARTITION -q $QOS_LEVEL \
 		${MAIL:+"$MAIL_ARGS"} \
 		${JOB_NAME:+"$USR_SPEC_JOB_NAME"} \
-		--output="${OUT_FILE}.log" --error="${ERR_FILE}.log" \
+		# --output="${OUT_FILE}.log" --error="${ERR_FILE}.log" \
 		--gpus-per-node=$N_GPUS --gres=gpu:$N_GPUS -t $MAX_TIME --signal=B:SIGUSR1@${SIG_INTERVAL} --nodes=$N_NODES --cpus-per-gpu=$CPUS_PER_GPU -A $QUEUE \
 		$JOB_FILE_PATH/${JOB_SUBMISSION_SCRIPT} -e $ENV_NAME -t $SCRIPT_TYPE -d $SCRIPT_DIR -f $SCRIPT_FILE
 else
