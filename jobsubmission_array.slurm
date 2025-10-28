@@ -23,14 +23,14 @@
 
 # FILENAME:  jobsubmission_array
 
-#SBATCH -A kaushik
+#SBATCH -A cocosys
 #SBATCH --nodes=1 
 #SBATCH --time=6:00:00
-#SBATCH --job-name DEFAULT
+#SBATCH --job-name=DEFAULT
 #SBATCH --array=1-20%5                  # Array range (this creates 20 tasks with IDs from 1 to 20, with max 5 tasks concurrently. Set number of tasks to total number of iterations in loop, 20 in this case)
 #SBATCH --gpus-per-node=1
-#SBATCH --output=${HOME}/joboutput/${SLURM_JOB_NAME}_%A_%a.out
-#SBATCH --error=${HOME}/joboutput/${SLURM_JOB_NAME}_%A_%a.out
+#SBATCH --output=/home/%u/joboutput/%u_%A_%a.log
+#SBATCH --error=/home/%u/joboutput/%u_%A_%a.log
 #SBATCH --signal=B:USR1@60
 
 
@@ -38,12 +38,12 @@
 # DO NOT MODIFY THESE SPECIAL COMMENTS
 
 # handle job renaming for default name jobs
-# if [[ $SLURM_JOB_NAME == "DEFAULT" ]]; then
-# 	scontrol update job=$SLURM_JOB_ID JobName=$(whoami)_$SLURM_JOB_ID
-# fi
+if [[ $SLURM_JOB_NAME == "DEFAULT" ]]; then
+	scontrol update job=$SLURM_JOB_ID JobName=$(whoami)_$SLURM_JOB_ID
+fi
 
 # trap SIGUSR1 coming from sbatch and pass to python script
-# trap 'sig_handler' SIGUSR1
+trap 'sig_handler' SIGUSR1
 
 # Print the hostname of the compute node on which this job is running.
 echo -e "Hostname: $(/bin/hostname)\n"

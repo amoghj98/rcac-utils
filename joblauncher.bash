@@ -42,7 +42,7 @@ INTERACTIVE=""
 
 # file name setup
 JOB_NAME=""
-LOG_PATH="${HOME}/joboutput/"
+LOG_PATH="/home/${USER}/joboutput"
 
 # usage help message
 usage() {
@@ -54,7 +54,7 @@ usage() {
 	echo -e "-f SCRIPT_FILE: Name of python file to run. Defaults to helloWorld.py"
 	echo -e "-l LOG_PATH: Absolute path to logging directory. Defaults to ${HOME}/joboutput"
 	echo -e "-e ENV_NAME: Name of the script's conda environment. Defaults to 'base'" 
-	echo -e "-n JOB_NAME: Name of the job. Defaults to ${USER}_%j, where %j is the job number"
+	echo -e "-n JOB_NAME: Name of the job. Defaults to ${USER}_%j, where %j is the job number\n\t[${green}NOTE${nc}] Jobs launched without a custom name will be named 'DEFAULT' until they are launched"
 	echo -e "-g N_GPUS: Number of GPU cards required. Defaults to 1"
 	echo -e "-c N_CPUS: Number of CPUs required. Defaults to 14.\n\t[${yellow}WARNING${nc}] Gautschi restricts N_CPUS to 14 per requested GPU. Supply this arg accordingly"
 	echo -e "-q QUEUE: SLURM queue to launch job on. Supported values: kaushik, cocosys. Defaults to 'cocosys'"
@@ -105,8 +105,8 @@ while getopts "hj:t:d:f:l:e:n:g:c:q:Q:p:T:s:mi" opts; do
 done
 
 # remainder of filename setup
-OUT_FILE="${LOG_PATH}${JOB_NAME}"
-ERR_FILE="${LOG_PATH}${JOB_NAME}"
+OUT_FILE="${LOG_PATH}/${JOB_NAME}"
+ERR_FILE="${LOG_PATH}/${JOB_NAME}"
 
 # sanity checks
 SUPPORTED_SCRIPTS=("bash" "python")
@@ -145,13 +145,13 @@ N_NODES=$(((($N_CPUS+$DIV-1))/$DIV))
 # control requested CPU count
 if [[ $N_GPUS -gt 0 ]]; then
 	REQ_CPUS_PER_GPU=$(($N_CPUS/$N_GPUS))
-# else
-# 	CPU_ONLY_PARTITIONS=("highmem")
-# 	if [[ ! " ${CPU_ONLY_PARTITIONS[@]} " =~ " $PARTITION " ]]; then
-# 		# does not support cpu-only jobs on partitions other than highmem right now, TODO
-# 		echo -e "[${red}FATAL${nc}] Launching CPU-only jobs not supported on partition $PARTITION. CPU-only jobs can only be launched on partition(s): $CPU_ONLY_PARTITIONS"
-# 		exit -1
-# 	fi
+else
+	CPU_ONLY_PARTITIONS=("highmem")
+	if [[ ! " ${CPU_ONLY_PARTITIONS[@]} " =~ " $PARTITION " ]]; then
+		# does not support cpu-only jobs on partitions other than highmem right now, TODO
+		echo -e "[${red}FATAL${nc}] Launching CPU-only jobs not supported on partition $PARTITION. CPU-only jobs can only be launched on partition(s): $CPU_ONLY_PARTITIONS"
+		exit -1
+	fi
 fi
 MAX_CPUS_PER_GPU=$(($DIV/$((${CLUSTER}"_gpu_"${PARTITION}))))
 if [[ $REQ_CPUS_PER_GPU -gt $MAX_CPUS_PER_GPU ]] && [[ $PARTITION == "cocosys" ]]; then
@@ -179,6 +179,9 @@ MAIL_ARGS="--mail-type=${MAIL_TYPE} --mail-user=${USER}@purdue.edu"
 # job name construction
 USR_SPEC_JOB_NAME="--job-name=${JOB_NAME}"
 
+# log name construction
+USR_SPEC_LOG_NAME="--output=${LOG_PATH}/${JOB_NAME}.log --error=${LOG_PATH}/${JOB_NAME}.log"
+
 # call to sbatch to launch the job
 # sbatch args are arranged thus:
 # sbatch \
@@ -201,7 +204,7 @@ if [[ ! $INTERACTIVE ]]; then
 		-p $PARTITION -q $QOS_LEVEL \
 		${MAIL:+"$MAIL_ARGS"} \
 		${JOB_NAME:+"$USR_SPEC_JOB_NAME"} \
-		# --output="${OUT_FILE}.log" --error="${ERR_FILE}.log" \
+		${JOB_NAME:+"$USR_SPEC_LOG_NAME"} \
 		--gpus-per-node=$N_GPUS --gres=gpu:$N_GPUS -t $MAX_TIME --signal=B:SIGUSR1@${SIG_INTERVAL} --nodes=$N_NODES --cpus-per-gpu=$CPUS_PER_GPU -A $QUEUE \
 		$JOB_FILE_PATH/${JOB_SUBMISSION_SCRIPT} -e $ENV_NAME -t $SCRIPT_TYPE -d $SCRIPT_DIR -f $SCRIPT_FILE
 else

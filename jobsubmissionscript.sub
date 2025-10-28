@@ -24,13 +24,13 @@
 # FILENAME:  jobsubmissionfile
 
 
-#SBATCH -A kaushik
+#SBATCH -A cocosys
 #SBATCH --nodes=1 
 #SBATCH --time=6:00:00
-#SBATCH --job-name DEFAULT
+#SBATCH --job-name=DEFAULT
 #SBATCH --gpus-per-node=1
-#SBATCH --output=${HOME}/joboutput/%x_%j.out
-#SBATCH --error=${HOME}/joboutput/%x_%j.err
+#SBATCH --output=/home/%u/joboutput/%u_%j.log
+#SBATCH --error=/home/%u/joboutput/%u_%j.log
 #SBATCH --signal=B:USR1@60
 
 
