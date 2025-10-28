@@ -63,10 +63,28 @@ else
 fi
 
 # change default conda dir to prevent home directory from filling up
-mkdir -p /scratch/${CLUSTER}/${USER}/.conda/pkgs
-mkdir -p /scratch/${CLUSTER}/${USER}/.conda/envs
-conda config --add pkgs_dirs /scratch/${CLUSTER}/${USER}/.conda/pkgs
-conda config --add envs_dirs /scratch/${CLUSTER}/${USER}/.conda/envs
+if [[ ! -d /scratch/${CLUSTER}/${USER}/.conda ]]; then
+	echo -ne "Setting up conda directories...\t\t"
+	mkdir -p /scratch/${CLUSTER}/${USER}/.conda/pkgs
+	mkdir -p /scratch/${CLUSTER}/${USER}/.conda/envs
+	conda config --add pkgs_dirs /scratch/${CLUSTER}/${USER}/.conda/pkgs
+	conda config --add envs_dirs /scratch/${CLUSTER}/${USER}/.conda/envs
+	echo -e "[${green}DONE${nc}]"
+else
+	echo -e "[${green}INFO${nc}] Directories already set up. Nothing to do."
+fi
+
+#
+if ! grep -q "CONDA_ENVS_DIRS" $HOME/.bashrc; then
+	echo -ne "Adding conda env variables to .bashrc...\t"
+	echo '' >> $HOME/.bashrc
+	echo 'export CONDARC="/home/'${USER}'/.condarc"' >> $HOME/.bashrc
+	echo 'export CONDA_ENVS_DIRS="/scratch/'${CLUSTER}'/'${USER}'/.conda/envs"' >> $HOME/.bashrc
+	echo 'export CONDA_PKGS_DIRS="/scratch/'${CLUSTER}'/'${USER}'/.conda/pkgs"' >> $HOME/.bashrc
+	echo -e "[${green}DONE${nc}]"
+else
+	echo -e "[${green}INFO${nc}] Conda env variables already in .bashrc. Nothing to do."
+fi
 
 # add auto env export script to crontab
 echo -ne "Setting up automatic conda env export...\t\t"
