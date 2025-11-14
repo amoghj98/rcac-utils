@@ -42,7 +42,7 @@ INTERACTIVE=""
 
 # file name setup
 JOB_NAME=""
-LOG_PATH="${HOME}/joboutput/"
+LOG_PATH="/home/${USER}/joboutput"
 
 # usage help message
 usage() {
@@ -105,8 +105,8 @@ while getopts "hj:t:d:f:l:e:n:g:c:q:Q:p:T:s:mi" opts; do
 done
 
 # remainder of filename setup
-OUT_FILE="${LOG_PATH}${JOB_NAME}"
-ERR_FILE="${LOG_PATH}${JOB_NAME}"
+OUT_FILE="${LOG_PATH}/${JOB_NAME}"
+ERR_FILE="${LOG_PATH}/${JOB_NAME}"
 
 # sanity checks
 SUPPORTED_SCRIPTS=("bash" "python")
