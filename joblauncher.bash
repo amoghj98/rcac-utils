@@ -42,7 +42,7 @@ INTERACTIVE=""
 
 # file name setup
 JOB_NAME=""
-LOG_PATH="/home/${USER}/joboutput"
+LOG_PATH="${HOME}/joboutput/"
 
 # usage help message
 usage() {
@@ -105,8 +105,8 @@ while getopts "hj:t:d:f:l:e:n:g:c:q:Q:p:T:s:mi" opts; do
 done
 
 # remainder of filename setup
-OUT_FILE="${LOG_PATH}/${JOB_NAME}"
-ERR_FILE="${LOG_PATH}/${JOB_NAME}"
+OUT_FILE="${LOG_PATH}${JOB_NAME}"
+ERR_FILE="${LOG_PATH}${JOB_NAME}"
 
 # sanity checks
 SUPPORTED_SCRIPTS=("bash" "python")
@@ -180,7 +180,9 @@ MAIL_ARGS="--mail-type=${MAIL_TYPE} --mail-user=${USER}@purdue.edu"
 USR_SPEC_JOB_NAME="--job-name=${JOB_NAME}"
 
 # log name construction
-USR_SPEC_LOG_NAME="--output=${LOG_PATH}/${JOB_NAME}.log --error=${LOG_PATH}/${JOB_NAME}.log"
+USR_SPEC_LOG_NAME="--output=${LOG_PATH}/${JOB_NAME}.log"
+
+USR_SPEC_ERR_NAME="--error=${LOG_PATH}/${JOB_NAME}.log"
 
 # call to sbatch to launch the job
 # sbatch args are arranged thus:
@@ -205,6 +207,7 @@ if [[ ! $INTERACTIVE ]]; then
 		${MAIL:+"$MAIL_ARGS"} \
 		${JOB_NAME:+"$USR_SPEC_JOB_NAME"} \
 		${JOB_NAME:+"$USR_SPEC_LOG_NAME"} \
+		${JOB_NAME:+"$USR_SPEC_ERR_NAME"} \
 		--gpus-per-node=$N_GPUS --gres=gpu:$N_GPUS -t $MAX_TIME --signal=B:SIGUSR1@${SIG_INTERVAL} --nodes=$N_NODES --cpus-per-gpu=$CPUS_PER_GPU -A $QUEUE \
 		$JOB_FILE_PATH/${JOB_SUBMISSION_SCRIPT} -e $ENV_NAME -t $SCRIPT_TYPE -d $SCRIPT_DIR -f $SCRIPT_FILE
 else
