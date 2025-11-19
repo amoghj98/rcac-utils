@@ -35,7 +35,7 @@ nc='\033[0m'
 QUEUE=cocosys
 USER=$(whoami)
 CONFIG_PATH=/home/${USER}/rcac-utils
-CLUSTER=$(echo $(hostname) | cut -c 9- | awk -F '.rcac' '{print $1}')
+CLUSTER=$(echo $(hostname) | cut -d '.' -f 2)
 
 # Cluster constants. DO NOT MODIFY
 # Gautschi CPU cores/node
