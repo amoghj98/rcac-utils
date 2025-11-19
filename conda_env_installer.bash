@@ -70,6 +70,14 @@ if [[ ! ".yml" == *"$YML_FILENAME"* ]]; then
     YML_FILENAME="$YML_FILENAME.yml"
 fi
 
+HOST=$(echo $(hostname) | cut -d '.' -f 1)
+UNSUPPORTED_HOSTS=("i000" "i001" "i002")
+if [[ " ${UNSUPPORTED_HOSTS[@]} " =~ " $HOST " ]]; then
+	echo -e "[${red}FATAL${nc}] Conda envs can not be installed from within compute nodes as this causes SSL2 errors. Please install envs only from a login node"
+	exit 1
+fi
+
+# set YML_PATH to default if reinstalling
 if [ $REINSTALL ]; then
     YML_PATH=$HOME/ymls
 fi
