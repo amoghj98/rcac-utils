@@ -23,6 +23,8 @@
 
 # FILENAME:  joblauncher
 
+# load module cmd to prevent weird bug experienced by few folks
+source /etc/profile.d/modules.sh
 
 # necessary imports
 source config_slurm.bash
@@ -40,7 +42,8 @@ INTERACTIVE=""
 
 # file name setup
 JOB_NAME=""
-LOG_PATH="${HOME}/joboutput/"
+LOG_PATH="${HOME}/joboutput"
+USR_SPEC_LOG=""
 
 # usage help message
 usage() {
@@ -50,9 +53,9 @@ usage() {
 	echo -e "-t SCRIPT_TYPE: Type of script to execute. Supported values: bash, python. Defaults to 'python'"
 	echo -e "-d SCRIPT_DIR: Absolute path to directory containing the python/other code script to be run. Defaults to '${HOME}/rcac-utils'"
 	echo -e "-f SCRIPT_FILE: Name of python file to run. Defaults to helloWorld.py"
-	echo -e "-l LOG_PATH: Absolute path to logging directory. Defaults to ${HOME}/joboutput"
+	echo -e "-l LOG_PATH: Absolute path to logging directory. Defaults to ${HOME}/joboutput\n\t[${yellow}WARNING${nc}] Custom log path MUST be specified along with a custom job name"
 	echo -e "-e ENV_NAME: Name of the script's conda environment. Defaults to 'base'" 
-	echo -e "-n JOB_NAME: Name of the job. Defaults to ${USER}_%j, where %j is the job number"
+	echo -e "-n JOB_NAME: Name of the job. Defaults to ${USER}_%j, where %j is the job number\n\t[${green}NOTE${nc}] Jobs launched without a custom name will be named 'DEFAULT' until they are launched"
 	echo -e "-g N_GPUS: Number of GPU cards required. Defaults to 1"
 	echo -e "-c N_CPUS: Number of CPUs required. Defaults to 14.\n\t[${yellow}WARNING${nc}] Gautschi restricts N_CPUS to 14 per requested GPU. Supply this arg accordingly"
 	echo -e "-q QUEUE: SLURM queue to launch job on. Supported values: kaushik, cocosys. Defaults to 'cocosys'"
@@ -86,7 +89,8 @@ while getopts "hj:t:d:f:l:e:n:g:c:q:Q:p:T:s:mi" opts; do
 		t)	SCRIPT_TYPE=$OPTARG;;
 		d)  SCRIPT_DIR=$OPTARG;;
 		f)	SCRIPT_FILE=$OPTARG;;
-		l)	LOG_PATH=$OPTARG;;
+		l)	LOG_PATH=$OPTARG
+					 USR_SPEC_LOG="true";;
 		e)	ENV_NAME=$OPTARG;;
 		n)	JOB_NAME=$OPTARG;;
 		g)  N_GPUS=$OPTARG;;
@@ -103,8 +107,13 @@ while getopts "hj:t:d:f:l:e:n:g:c:q:Q:p:T:s:mi" opts; do
 done
 
 # remainder of filename setup
-OUT_FILE="${LOG_PATH}${JOB_NAME}"
-ERR_FILE="${LOG_PATH}${JOB_NAME}"
+if [[ "${LOG_PATH: -1}" == "/" ]]; then
+	OUT_FILE=${LOG_PATH}${JOB_NAME}.log
+	ERR_FILE=${LOG_PATH}${JOB_NAME}.log
+else
+	OUT_FILE=${LOG_PATH}/${JOB_NAME}.log
+	ERR_FILE=${LOG_PATH}/${JOB_NAME}.log
+fi
 
 # sanity checks
 SUPPORTED_SCRIPTS=("bash" "python" "python3")
@@ -145,16 +154,21 @@ if [[ $N_GPUS -gt 0 ]] && [[ $((${CLUSTER}"_gpu_"${PARTITION})) -eq 0 ]]; then
 	exit 1
 fi
 
-if [[ "gautschi" == *"$CLUSTER"* ]]; then
-	# essential computation
-	DIV=$((${CLUSTER}"_cpu_"${PARTITION}))
-	N_NODES=$(((($N_CPUS+$DIV-1))/$DIV))
+if [[ $USR_SPEC_LOG ]] && [[ $JOB_NAME == "" ]]; then
+	echo -e "[${red}FATAL${nc}] Custom log path MUST be specified with a job name. Please specify a job name using the -n flag"
+	exit 1
+fi
 
+# essential computation
+DIV=$((${CLUSTER}"_cpu_"${PARTITION}))
+N_NODES=$(((($N_CPUS+$DIV-1))/$DIV))
+
+if [[ "gautschi" == *"$CLUSTER"* ]]; then
 	# control requested CPU count
 	if [[ $N_GPUS -gt 0 ]]; then
 		REQ_CPUS_PER_GPU=$(($N_CPUS/$N_GPUS))
 	else
-		CPU_ONLY_PARTITIONS=("highmem")
+		CPU_ONLY_PARTITIONS=("highmem" "batch")
 		if [[ ! " ${CPU_ONLY_PARTITIONS[@]} " =~ " $PARTITION " ]]; then
 			# does not support cpu-only jobs on partitions other than highmem right now, TODO
 			echo -e "[${red}FATAL${nc}] Launching CPU-only jobs not supported on partition $PARTITION. CPU-only jobs can only be launched on partition(s): $CPU_ONLY_PARTITIONS"
@@ -207,6 +221,12 @@ MAIL_ARGS="--mail-type=${MAIL_TYPE} --mail-user=${USER}@purdue.edu"
 # job name construction
 USR_SPEC_JOB_NAME="--job-name=${JOB_NAME}"
 
+# log name construction
+USR_SPEC_LOG_NAME="--output=${OUT_FILE}"
+
+# error log name construction
+USR_SPEC_ERR_NAME="--error=${ERR_FILE}"
+
 # call to sbatch to launch the job
 # sbatch args are arranged thus:
 # sbatch \
@@ -224,14 +244,14 @@ USR_SPEC_JOB_NAME="--job-name=${JOB_NAME}"
 #	-A [QUEUE] : Name of queue to submit job to. H200s are accessed using queue "cocosys". NRL's private queue is named "kaushik"
 #
 #	For more info about sbatch, consult the sbatch man page using "man sbatch"
-
 if [[ "gautschi" == *"$CLUSTER"* ]]; then
 	if [[ ! $INTERACTIVE ]]; then
 		sbatch \
 			-p $PARTITION -q $QOS_LEVEL \
 			${MAIL:+"$MAIL_ARGS"} \
 			${JOB_NAME:+"$USR_SPEC_JOB_NAME"} \
-			--output="${OUT_FILE}.log" --error="${ERR_FILE}.log" \
+			${USR_SPEC_LOG:+"$USR_SPEC_LOG_NAME"} \
+			${USR_SPEC_LOG:+"$USR_SPEC_ERR_NAME"} \
 			--gpus-per-node=$N_GPUS --gres=gpu:$N_GPUS -t $MAX_TIME --signal=B:SIGUSR1@${SIG_INTERVAL} --nodes=$N_NODES --cpus-per-gpu=$CPUS_PER_GPU -A $QUEUE \
 			$JOB_FILE_PATH/${JOB_SUBMISSION_SCRIPT} -e $ENV_NAME -t $SCRIPT_TYPE -d $SCRIPT_DIR -f $SCRIPT_FILE
 	else
@@ -239,15 +259,16 @@ if [[ "gautschi" == *"$CLUSTER"* ]]; then
 			-p $PARTITION -q $QOS_LEVEL \
 			${MAIL:+"$MAIL_ARGS"} \
 			${JOB_NAME:+"$USR_SPEC_JOB_NAME"} \
-			--gpus-per-node=$N_GPUS --gres=gpu:$N_GPUS -t $MAX_TIME --signal=R:SIGUSR1@${SIG_INTERVAL} --nodes=$N_NODES --cpus-per-gpu=$CPUS_PER_GPU -A $QUEUE
+			-t $MAX_TIME --signal=R:SIGUSR1@${SIG_INTERVAL} --nodes=$N_NODES --cpus-per-task=$N_CPUS -A $QUEUE
 	fi
 else
 	if [[ ! $INTERACTIVE ]]; then
 		sbatch \
-			-p $PARTITION \
+			-p $PARTITION -q $QOS_LEVEL \
 			${MAIL:+"$MAIL_ARGS"} \
 			${JOB_NAME:+"$USR_SPEC_JOB_NAME"} \
-			--output="${OUT_FILE}.log" --error="${ERR_FILE}.log" \
+			${USR_SPEC_LOG:+"$USR_SPEC_LOG_NAME"} \
+			${USR_SPEC_LOG:+"$USR_SPEC_ERR_NAME"} \
 			-t $MAX_TIME --signal=B:SIGUSR1@${SIG_INTERVAL} --nodes=$N_NODES --cpus-per-task=$N_CPUS -A $USER \
 			$JOB_FILE_PATH/${JOB_SUBMISSION_SCRIPT} -e $ENV_NAME -t $SCRIPT_TYPE -d $SCRIPT_DIR -f $SCRIPT_FILE
 	else

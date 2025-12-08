@@ -21,37 +21,28 @@
 # SOFTWARE.
 
 
-# FILENAME:  jobsubmissionfile
-
+# FILENAME:  jobsubmission_array
 
 #SBATCH -A cocosys
 #SBATCH --nodes=1 
 #SBATCH --time=6:00:00
 #SBATCH --job-name=DEFAULT
+#SBATCH --array=1-20%5                  # Array range (this creates 20 tasks with IDs from 1 to 20, with max 5 tasks concurrently. Set number of tasks to total number of iterations in loop, 20 in this case)
 #SBATCH --gpus-per-node=1
-#SBATCH --output=/home/%u/joboutput/%u_%j.log
-#SBATCH --error=/home/%u/joboutput/%u_%j.log
+#SBATCH --output=/home/%u/joboutput/%u_%A_%a.log
+#SBATCH --error=/home/%u/joboutput/%u_%A_%a.log
 #SBATCH --signal=B:USR1@60
 
 
 # The sbatch comments above are a special kind of comment that act as arguments to the sbatch command unless superceded by cmd-line args in the launch file.
 # DO NOT MODIFY THESE SPECIAL COMMENTS
 
-# signal trap and fwding function. DO NOT MODIFY
-# function to fwd SLURM's SIGUSR1 to child process (the user script being executed)
-function sig_handler(){
-	kill -SIGUSR1 $PID
-}
-
-# necessary imports
-source config_slurm.bash
-
 # handle job renaming for default name jobs
 if [[ $SLURM_JOB_NAME == "DEFAULT" ]]; then
 	scontrol update job=$SLURM_JOB_ID JobName=$(whoami)_$SLURM_JOB_ID
 fi
 
-# trap SIGUSR1 coming from sbatch and pass to user script
+# trap SIGUSR1 coming from sbatch and pass to python script
 trap 'sig_handler' SIGUSR1
 
 # Print the hostname of the compute node on which this job is running.
@@ -63,8 +54,8 @@ usage() {
 	echo "-h: Display help message"
 	echo "-e ENV_NAME: Name of the script's conda environment. Defaults to 'base'"
 	echo "-t SCRIPT_TYPE: Type of script to execute. Supported values: bash, python. Defaults to 'python'"
-	echo "-d JOB_SCRIPT_DIR: Absolute path to directory containing the script to be run. Defaults to '${HOME}/rcac-utils'"
-	echo "-f SCRIPT_FILE: Name of user file to run. Defaults to helloWorld.py"
+	echo "-d JOB_SCRIPT_DIR: Absolute path to directory containing the script to be run. Defaults to '${HOME}'"
+	echo "-f SCRIPT_FILE: Name of python file to run. Defaults to helloWorld.py"
 	exit 1;
 }
 
@@ -87,25 +78,28 @@ while getopts "he:t:d:f:" opts; do
 done
 
 # necessary init
-if [[ "gautschi" == *"$CLUSTER"* ]]; then
-	module purge
-	module load conda
-	module load cuda
-	conda activate $ENV_NAME
-# The following commands are commented out as folks on nano rarey use conda. Uncomment if needed.
-# else
-# 	source $HOME/.bashrc
-# 	conda activate $ENV_NAME
-fi
+module purge
+module load conda
+module load cuda
+conda activate $ENV_NAME
 
 # Change to the directory containing job script
 cd $SCRIPT_DIR
 
-# actual call to your script (uncomment the desired version, comment the other one)
-# version 1: simple call, OS signalling from SLURM not implemented
-# $SCRIPT_TYPE $SCRIPT_FILE
+for SEED in 0 1 2 3;
+do
+	for LR in {-5..-1..1};
+	do
+		lr=$(echo 10^$LR | bc -l)
+		echo $SEED
+		echo $lr
+		# actual call to your python script (uncomment the desired version, comment the other one)
+		# version 1: simple call, OS signalling from SLURM not implemented
+		# $SCRIPT_TYPE $SCRIPT_FILE
 
-# version 2: better call, OS signalling from SLURM enabled (exception catching and handling left to the user)
-$SCRIPT_TYPE $SCRIPT_FILE &
-PID="$!"
-wait "${PID}"
+		# version 2: better call, OS signalling from SLURM enabled (exception catching and handling left to the user)
+		# $SCRIPT_TYPE $SCRIPT_FILE &
+		# PID="$!"
+		# wait "${PID}"
+	done
+done
