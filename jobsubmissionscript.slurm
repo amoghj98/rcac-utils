@@ -92,10 +92,10 @@ if [[ "gautschi" == *"$CLUSTER"* ]]; then
 	module load conda
 	module load cuda
 	conda activate $ENV_NAME
-# The following commands are commented out as folks on nano rarey use conda. Uncomment if needed.
-# else
-# 	source $HOME/.bashrc
-# 	conda activate $ENV_NAME
+# The following commands may not be needed as folks on nano rarey use conda. Comment if needed.
+else
+	source $HOME/.bashrc
+	conda activate $ENV_NAME
 fi
 
 # Change to the directory containing job script

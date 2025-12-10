@@ -42,8 +42,12 @@ INTERACTIVE=""
 
 # file name setup
 JOB_NAME=""
-LOG_PATH="${HOME}/joboutput"
 USR_SPEC_LOG=""
+if [[ "gautschi" == *"$CLUSTER"* ]]; then
+	LOG_PATH="${HOME}/joboutput"
+else
+	LOG_PATH="/home/nano01/a/${USER}/joboutput"
+fi
 
 # usage help message
 usage() {
@@ -72,6 +76,7 @@ usage() {
 N_GPUS=1
 N_CPUS=14
 PARTITION=cocosys
+QUEUE=cocosys
 QOS_LEVEL=normal
 MAX_TIME=6:00:00
 ENV_NAME=base
@@ -107,6 +112,11 @@ while getopts "hj:t:d:f:l:e:n:g:c:q:Q:p:T:s:mi" opts; do
 done
 
 # remainder of filename setup
+# Use default job name pattern if JOB_NAME is empty
+if [[ -z "$JOB_NAME" ]] && [[ ! $INTERACTIVE ]]; then
+	JOB_NAME="%u_%j"
+fi
+
 if [[ "${LOG_PATH: -1}" == "/" ]]; then
 	OUT_FILE=${LOG_PATH}${JOB_NAME}.log
 	ERR_FILE=${LOG_PATH}${JOB_NAME}.log
@@ -123,39 +133,42 @@ if [[ ! " ${SUPPORTED_SCRIPTS[@]} " =~ " $SCRIPT_TYPE " ]]; then
 	exit 1
 fi
 
-#
 if [[ "gautschi" == *"$CLUSTER"* ]]; then
 	SUPPORTED_QUEUES=("kaushik" "cocosys")
 	SUPPORTED_QOS_LEVELS=("normal" "preemptible")
+	SUPPORTED_PARTITIONS=("cocosys", "highmem")
+	CPU_ONLY_PARTITIONS=("highmem")
 else
 	SUPPORTED_QUEUES=("batch")
-	SUPPORTED_QOS_LEVELS=("normal" "preemptible")
+	SUPPORTED_QOS_LEVELS=("normal")
+	SUPPORTED_PARTITIONS=("batch")
+	CPU_ONLY_PARTITIONS=("batch")
 	N_GPUS=$((0))
-	PARTITION=batch
 fi
 
+# idiot-proofing
 if [[ ! " ${SUPPORTED_QUEUES[@]} " =~ " $QUEUE " ]]; then
-	echo -e "[${red}FATAL${nc}] Unsupported queue\nSupported Queues: ${SUPPORTED_QUEUES[@]}"
+	echo -e "[${red}FATAL${nc}] Unsupported queue '${QUEUE}'\nSupported Queues: ${SUPPORTED_QUEUES[@]}"
 	exit 1
 fi
 
 if [[ ! " ${SUPPORTED_QOS_LEVELS[@]} " =~ " $QOS_LEVEL " ]]; then
-	echo -e "[${red}FATAL${nc}] Unsupported QoS\nSupported QoS Levels: ${SUPPORTED_QOS_LEVELS[@]}"
+	echo -e "[${red}FATAL${nc}] Unsupported QoS '${QOS_LEVEL}'\nSupported QoS Levels: ${SUPPORTED_QOS_LEVELS[@]}"
+	exit 1
+fi
+
+if [[ ! " ${SUPPORTED_PARTITIONS[@]} " =~ " $PARTITION " ]]; then
+	echo -e "[${red}FATAL${nc}] Unsupported partition '${PARTITION}'\nSupported Partitions: ${SUPPORTED_PARTITIONS[@]}"
 	exit 1
 fi
 
 if [[ ! $QUEUE == "cocosys" ]] && [[ $PARTITION == "cocosys" ]]; then
-	echo -e "[${red}FATAL${nc}] Jobs on cocosys partition must be launched from the cocosys queue!"
+	echo -e "[${red}FATAL${nc}] Jobs on partition 'cocosys' must be launched from queue 'cocosys'!"
 	exit 1
 fi
 
 if [[ $N_GPUS -gt 0 ]] && [[ $((${CLUSTER}"_gpu_"${PARTITION})) -eq 0 ]]; then
 	echo -e "[${red}FATAL${nc}] GPU requirement specified, but selected partition ${PARTITION} does not contain GPUs!"
-	exit 1
-fi
-
-if [[ $USR_SPEC_LOG ]] && [[ $JOB_NAME == "" ]]; then
-	echo -e "[${red}FATAL${nc}] Custom log path MUST be specified with a job name. Please specify a job name using the -n flag"
 	exit 1
 fi
 
@@ -168,7 +181,7 @@ if [[ "gautschi" == *"$CLUSTER"* ]]; then
 	if [[ $N_GPUS -gt 0 ]]; then
 		REQ_CPUS_PER_GPU=$(($N_CPUS/$N_GPUS))
 	else
-		CPU_ONLY_PARTITIONS=("highmem" "batch")
+		CPU_ONLY_PARTITIONS=("highmem")
 		if [[ ! " ${CPU_ONLY_PARTITIONS[@]} " =~ " $PARTITION " ]]; then
 			# does not support cpu-only jobs on partitions other than highmem right now, TODO
 			echo -e "[${red}FATAL${nc}] Launching CPU-only jobs not supported on partition $PARTITION. CPU-only jobs can only be launched on partition(s): $CPU_ONLY_PARTITIONS"
@@ -187,7 +200,7 @@ if [[ "gautschi" == *"$CLUSTER"* ]]; then
 	fi
 
 	# protect compute resources!
-	if [[ $N_NODES -ge 2 ]]; then
+	if [[ $N_NODES -gt 1 ]]; then
 		read -p "$( echo -e "["${yellow}"WARNING"${nc}"] The requested number of tasks requires more than one node. MPI-enabled code necessary to run multi-node workloads. Non-MPI code will result in wasted compute resources. Is your code MPI-enabled? (y/n): ")" confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || FLAG=true
 		if $FLAG; then
 			echo -e "[${red}FATAL${nc}] Attempted multi-node run with non-MPI workload. Exiting..."
@@ -202,12 +215,17 @@ else
 	# no multi-node jobs
 	if [[ $N_NODES -gt 1 ]]; then
 		echo -e "[${red}FATAL${nc}] Jobs on NRL HPC clusters can not request more than one full node. Reduce CPU request to <= ${DIV} and retry."
+		exit 1
+	fi
+	# upper bound cpu request on nanos
+	if [[ "nano" == *"$CLUSTER"* ]] && [[ $N_CPUS -gt 40 ]]; then
+		echo -e "[${red}FATAL${nc}] nano clusters only have 40 CPU cores each. Reduce CPU request to <= 40 and retry."
+		exit 1
 	fi
 	# soft restrictions on cocosys clusters (enforce only 256 core restriction here, other restrictions based on priority will be enforced by mgmt scripts)
-	if [[ "cocosys" == *"$CLUSTER"* ]]; then
-		if [[ $N_CPUS -gt 256 ]]; then
-			echo -e "[${red}FATAL${nc}] Jobs on CoCoSys HPC clusters can not request more than 256 CPU cores. Reduce CPU request and retry."
-		fi
+	if [[ "cocosys" == *"$CLUSTER"* ]] && [[ $N_CPUS -gt 256 ]]; then
+		echo -e "[${red}FATAL${nc}] Jobs on CoCoSys HPC clusters can not request more than 256 CPU cores. Reduce CPU request and retry."
+		exit 1
 	fi
 	# modify script dir default value for nano
 	if [[ $SCRIPT_DIR == "$HOME/rcac-utils" ]]; then
@@ -250,8 +268,8 @@ if [[ "gautschi" == *"$CLUSTER"* ]]; then
 			-p $PARTITION -q $QOS_LEVEL \
 			${MAIL:+"$MAIL_ARGS"} \
 			${JOB_NAME:+"$USR_SPEC_JOB_NAME"} \
-			${USR_SPEC_LOG:+"$USR_SPEC_LOG_NAME"} \
-			${USR_SPEC_LOG:+"$USR_SPEC_ERR_NAME"} \
+			$USR_SPEC_LOG_NAME \
+			$USR_SPEC_ERR_NAME \
 			--gpus-per-node=$N_GPUS --gres=gpu:$N_GPUS -t $MAX_TIME --signal=B:SIGUSR1@${SIG_INTERVAL} --nodes=$N_NODES --cpus-per-gpu=$CPUS_PER_GPU -A $QUEUE \
 			$JOB_FILE_PATH/${JOB_SUBMISSION_SCRIPT} -e $ENV_NAME -t $SCRIPT_TYPE -d $SCRIPT_DIR -f $SCRIPT_FILE
 	else
@@ -267,15 +285,18 @@ else
 			-p $PARTITION -q $QOS_LEVEL \
 			${MAIL:+"$MAIL_ARGS"} \
 			${JOB_NAME:+"$USR_SPEC_JOB_NAME"} \
-			${USR_SPEC_LOG:+"$USR_SPEC_LOG_NAME"} \
-			${USR_SPEC_LOG:+"$USR_SPEC_ERR_NAME"} \
+			$USR_SPEC_LOG_NAME \
+			$USR_SPEC_ERR_NAME \
+			--chdir=${CONFIG_PATH} \
+			--gpus-per-node=0 --gres=gpu:0 \
 			-t $MAX_TIME --signal=B:SIGUSR1@${SIG_INTERVAL} --nodes=$N_NODES --cpus-per-task=$N_CPUS -A $USER \
 			$JOB_FILE_PATH/${JOB_SUBMISSION_SCRIPT} -e $ENV_NAME -t $SCRIPT_TYPE -d $SCRIPT_DIR -f $SCRIPT_FILE
 	else
-		salloc \
+		exec salloc \
 			-p $PARTITION -q $QOS_LEVEL \
 			${MAIL:+"$MAIL_ARGS"} \
 			${JOB_NAME:+"$USR_SPEC_JOB_NAME"} \
-			-t $MAX_TIME --signal=R:SIGUSR1@${SIG_INTERVAL} --nodes=$N_NODES --cpus-per-task=$N_CPUS -A $QUEUE
+			--chdir=${CONFIG_PATH} \
+			-t $MAX_TIME --signal=R:SIGUSR1@${SIG_INTERVAL} --nodes=$N_NODES --cpus-per-task=$N_CPUS -A $USER
 	fi
 fi

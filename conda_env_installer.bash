@@ -27,7 +27,7 @@
 source /etc/profile.d/modules.sh
 
 # necessary loading. DO NOT MODIFY
-source config_rcac.bash
+source config_slurm.bash
 
 # system constants. DO NOT MODIFY
 USER=$(whoami)

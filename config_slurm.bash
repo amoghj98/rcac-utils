@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 
-# FILENAME:  config_nano
+# FILENAME:  config_slurm
 
 
 # Text colour escape codes. DO NOT MODIFY
@@ -72,5 +72,17 @@ nano04_cpu_batch=40
 nano05_cpu_batch=40
 nano06_cpu_batch=40
 nano12_cpu_batch=40
-cocosys01_cpu=512
-cocosys02_cpu=512
+cocosys01_cpu_batch=512
+cocosys02_cpu_batch=512
+
+# Cluster constants. DO NOT MODIFY
+# Nano GPU cards per node
+nano01_gpu_batch=0
+nano02_gpu_batch=0
+nano03_gpu_batch=0
+nano04_gpu_batch=0
+nano05_gpu_batch=0
+nano06_gpu_batch=0
+nano12_gpu_batch=0
+cocosys01_gpu_batch=0
+cocosys02_gpu_batch=0
