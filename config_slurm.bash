@@ -37,12 +37,17 @@ USER=$(whoami)
 #
 CLUSTER=$(echo $(hostname) | cut -d '.' -f 2)
 if [[ "gautschi" == *"$CLUSTER"* ]]; then
-    CONFIG_PATH=/home/${USER}/rcac-utils
-    QUEUE=cocosys
+	CONFIG_PATH=/home/${USER}/rcac-utils
+	QUEUE=cocosys
 else
-    CLUSTER=$(echo $(hostname) | cut -d'.' -f 1)
-    CONFIG_PATH=/home/${CLUSTER}/a/${USER}/rcac-utils
-    QUEUE=batch
+	CLUSTER=$(echo $(hostname) | cut -d'.' -f 1)
+	if [[ "cocosys" == *"$CLUSTER"* ]]; then
+		CONFIG_PATH=/scratch/${CLUSTER}/a/${USER}/rcac-utils
+		QUEUE=batch
+	else
+		CONFIG_PATH=/home/${CLUSTER}/a/${USER}/rcac-utils
+		QUEUE=batch
+	fi
 fi
 
 # Cluster constants. DO NOT MODIFY

@@ -42,11 +42,10 @@ INTERACTIVE=""
 
 # file name setup
 JOB_NAME=""
-USR_SPEC_LOG=""
 if [[ "gautschi" == *"$CLUSTER"* ]]; then
 	LOG_PATH="${HOME}/joboutput"
 else
-	LOG_PATH="/home/nano01/a/${USER}/joboutput"
+	LOG_PATH="${CONFIG_PATH::-11}/joboutput"
 fi
 
 # usage help message
@@ -94,8 +93,7 @@ while getopts "hj:t:d:f:l:e:n:g:c:q:Q:p:T:s:mi" opts; do
 		t)	SCRIPT_TYPE=$OPTARG;;
 		d)  SCRIPT_DIR=$OPTARG;;
 		f)	SCRIPT_FILE=$OPTARG;;
-		l)	LOG_PATH=$OPTARG
-					 USR_SPEC_LOG="true";;
+		l)	LOG_PATH=$OPTARG;;
 		e)	ENV_NAME=$OPTARG;;
 		n)	JOB_NAME=$OPTARG;;
 		g)  N_GPUS=$OPTARG;;

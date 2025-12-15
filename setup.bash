@@ -47,7 +47,11 @@ if [[ "gautschi" == *"$CLUSTER"* ]]; then
 	INSTALL_DIR=$(find $HOME -name rcac-utils)
 else
 	CLUSTER=$(echo $(hostname) | cut -d '.' -f 1)
-	INSTALL_DIR=$(find /home/min/a/${USER} /home/nano01/a/${USER} -name rcac-utils 2>/dev/null)
+	if [[ "cocosys" == *"$CLUSTER"* ]]; then
+		INSTALL_DIR=$(find /scratch/${CLUSTER}/a/${USER} /home/min/a/${USER} -name rcac-utils 2>/dev/null -print -quit)
+	else
+		INSTALL_DIR=$(find /home/${CLUSTER}/a/${USER} /home/min/a/${USER} -name rcac-utils 2>/dev/null -print -quit)
+	fi
 fi
 echo -e "[${green}DONE${nc}]"
 
@@ -60,6 +64,12 @@ if [[ "gautschi" == *"$CLUSTER"* ]]; then
 		mv $INSTALL_DIR /home/${USER}
 	fi
 	INSTALL_DIR=/home/${USER}
+elif [[ "cocosys" == *"$CLUSTER"* ]]; then
+	if [[ ! $INSTALL_DIR == "/scratch/${CLUSTER}/a/${USER}/rcac-utils" ]]; then
+		echo -ne "\n[\033[1;33mWARNING\033[0m] Invalid Path spec: rcac-utils not installed in /scratch/${CLUSTER}/a/${USER}. Moving...\t"
+		mv $INSTALL_DIR /scratch/${CLUSTER}/a/${USER}
+	fi
+	INSTALL_DIR=/scratch/${CLUSTER}/a/${USER}
 else
 	if [[ ! $INSTALL_DIR == "/home/${CLUSTER}/a/${USER}/rcac-utils" ]]; then
 		echo -ne "\n[\033[1;33mWARNING\033[0m] Invalid Path spec: rcac-utils not installed in /home/${CLUSTER}/a/${USER}. Moving...\t"
@@ -78,7 +88,7 @@ source ${INSTALL_DIR}/rcac-utils/config_slurm.bash
 echo -e "[${green}DONE${nc}]"
 
 # add rcac-utils to $PATH if not already added
-if [[ ! $PATH == *"rcac-utils"* ]]; then
+if [[ ! $PATH == *"${INSTALL_DIR}/rcac-utils"* ]]; then
 	echo -ne "Setting up paths...\t\t\t\t"
 	echo 'export PATH="'${INSTALL_DIR}'/rcac-utils:$PATH"' >> $HOME/.bashrc
 	FLAG=true
@@ -99,9 +109,6 @@ if [[ "gautschi" == *"$CLUSTER"* ]]; then
 	else
 		echo -e "[${green}INFO${nc}] Directories already set up. Nothing to do."
 	fi
-fi
-
-if [[ "gautschi" == *"$CLUSTER"* ]]; then
 	#
 	if ! grep -q "CONDA_ENVS_DIRS" $HOME/.bashrc; then
 		echo -ne "Adding conda env variables to .bashrc...\t"

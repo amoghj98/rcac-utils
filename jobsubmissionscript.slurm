@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 
-# FILENAME:  jobsubmissionfile
+# FILENAME:  jobsubmissionscript
 
 
 #SBATCH -A cocosys
@@ -47,7 +47,7 @@ function sig_handler(){
 source config_slurm.bash
 
 # handle job renaming for default name jobs
-if [[ $SLURM_JOB_NAME == "DEFAULT" ]]; then
+if [[ $SLURM_JOB_NAME == "%u_%j" ]]; then
 	scontrol update job=$SLURM_JOB_ID JobName=$(whoami)_$SLURM_JOB_ID
 fi
 
