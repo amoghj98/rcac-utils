@@ -134,7 +134,7 @@ fi
 if [[ "gautschi" == *"$CLUSTER"* ]]; then
 	SUPPORTED_QUEUES=("kaushik" "cocosys")
 	SUPPORTED_QOS_LEVELS=("normal" "preemptible")
-	SUPPORTED_PARTITIONS=("cocosys", "highmem")
+	SUPPORTED_PARTITIONS=("cocosys" "highmem")
 	CPU_ONLY_PARTITIONS=("highmem")
 else
 	SUPPORTED_QUEUES=("batch")
