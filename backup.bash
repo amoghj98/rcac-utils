@@ -25,7 +25,7 @@
 
 
 # necessary loading. DO NOT MODIFY
-source config_rcac.bash
+source config_slurm.bash
 
 # script vars. DO NOT MODIFY
 FLAG=false
@@ -40,9 +40,6 @@ ARCHIVE_PATH=/home/${USER}/archives/
 
 # system directives. DO NOT MODIFY
 shopt -s nullglob
-
-# necessary loading. DO NOT MODIFY
-source config_rcac.bash
 
 # usage help message
 usage() {

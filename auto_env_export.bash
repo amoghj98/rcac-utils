@@ -23,17 +23,27 @@
 
 # FILENAME:  auto_env_export
 
-cd $HOME/rcac-utils
-
 source /etc/profile.d/modules.sh
 module purge
-module load conda
+
+CLUSTER=$(echo $(hostname) | cut -d '.' -f 2)
+if [[ "gautschi" == *"$CLUSTER"* ]]; then
+	INSTALL_DIR=/home/${USER}
+    module load conda
+else
+	CLUSTER=$(echo $(hostname) | cut -d '.' -f 1)
+	INSTALL_DIR=/home/${CLUSTER}/a/${USER}
+fi
+
+cd $INSTALL_DIR/rcac-utils
+
+source $HOME/.bashrc
+source ./config_slurm.bash
 
 env_array=$(eval "conda env list | cut -d ' ' -f1")
 env_array=${env_array[@]:4}
 for e in $env_array; do
-    # echo $e
     conda activate $e
-    conda env export -n $e>"$HOME/ymls/$e.yml"
+    conda env export -n $e>"$INSTALL_DIR/ymls/$e.yml"
     conda deactivate
 done
