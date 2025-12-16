@@ -1,6 +1,6 @@
-<h2> Utility Bash Scripts for use on NRL's RCAC Clusters </h2>
+<h2> Utility Bash Scripts for use on NRL's HPC Clusters </h2>
 
-This repository contains bash scripts for launching, orchestrating, managing, and monitoring jobs on NRL's RCAC clusters. RCAC uses the Simple Linux Utility for Resource Management (SLURM), a system providing job scheduling and job management on compute clusters. With SLURM, a user requests resources and submits a job to a queue. The system will then take jobs from queues, allocate the necessary nodes, and execute them.
+This repository contains bash scripts for launching, orchestrating, managing, and monitoring jobs on NRL's HPC clusters. These clusters use the Simple Linux Utility for Resource Management (SLURM), a system providing job scheduling and job management on compute clusters. With SLURM, a user requests resources and submits a job to a queue. The system will then take jobs from queues, allocate the necessary nodes, and execute them.
 
 This README provides an overview of the prerequisites for using the cluster, a description of all provided scripts, and a few examples and common utilities.
 
@@ -8,9 +8,9 @@ This README provides an overview of the prerequisites for using the cluster, a d
 ## TLDR
 To launch a job on the cluster, consider the following case:
 
-The file <code>setup.bash</code> has been executed and all paths have been setup correctly (Note that at this point, this repository will be located in <code>/home/$USER</code>). The script file <code>file.py</code>, located in directory <code>/home/$USER/test</code> is to be executed in a conda environment named <code>env</code>.
+The file <code>setup.bash</code> has been executed and all paths have been setup correctly (Note that at this point, this repository will be located in <code>/home/$USER</code> on Gautschi, <code>/home/nano01/a/$USER</code> on nano, and <code>/home/cocosys0X/a/$USER</code> on cocosys0X). The script file <code>file.py</code>, located in directory <code>/home/$USER/test</code> is to be executed in a conda environment named <code>env</code>.
 
-Let us assume that the script requires 2 GPU cards, and as many CPUs as possible (14*N_GPU=28. For info on why 28, read the help message of joblauncher.bash)
+On Gautschi, let us assume that the script requires 2 GPU cards, and as many CPUs as possible (14*N_GPU=28. For info on why 28, read the help message of joblauncher.bash)
 
 Let us also assume that the script is to be run on the "cocosys" partition using the "cocosys" queue and that the user estimates a max runtime of 2.5 days. Additionally, the user determines that, in case the job runs for longer than 2.5 days, the necessary checkpoint and metadata saving will take ~97 seconds.
 
@@ -19,6 +19,16 @@ Given these considerations, the job should be launched using the following comma
 ```
 bash joblauncher.bash -j jobsubmissionscript.sub -t python -d ~/test/ -f file.py -e env -g 2 -c 28 -q cocosys -p cocosys -T 2-12:00:00 -s 97
 ```
+
+On nano, let us assume that the script requires 20 CPUs. Let us also assume that the script is to be run on the "batch" partition using the "batch" queue and that the user estimates a max runtime of 2.5 days. Additionally, the user determines that, in case the job runs for longer than 2.5 days, the necessary checkpoint and metadata saving will take ~97 seconds.
+
+Given these considerations, the job should be launched using the following command:
+
+```
+bash joblauncher.bash -j jobsubmissionscript.sub -t python -d ~/test/ -f file.py -e env -g 2 -c 28 -q batch -p batch -T 2-12:00:00 -s 97
+```
+
+If an interactive shell on the allocated resources is desired, then the <code>-i</code> flag should be added to the previous command. Note that providing this flag will result in a few other arguments being ignored, as specified in the docstring.
 
 If email updates of job status are desired, then the <code>-m</code> flag should be added to the previous command.
 
@@ -38,12 +48,12 @@ then the cluster may be down. For updates regarding cluster status, please check
 - [Prerequisites](#prerequisites)
 - [Cloning and Setup](#cloning-and-setup)
 - [Scripts](#scripts)
-  - [Conda Setup](#conda-setup)
-  - [Launching a Job](#launching-a-job)
-  - [Job Submission Script](#job-submission-script)
-  - [Monitoring Launched Jobs](#monitoring-jobs)
-  - [Backing-up Files](#backing-up-files)
-  - [Retrieving Backups](#retrieving-backups)
+	- [Conda Setup](#conda-setup)
+	- [Launching a Job](#launching-a-job)
+	- [Job Submission Script](#job-submission-script)
+	- [Monitoring Launched Jobs](#monitoring-jobs)
+	- [Backing-up Files](#backing-up-files)
+	- [Retrieving Backups](#retrieving-backups)
 - [Examples](#examples)
 - [Common Utilities](#common-utilities)
 - [Common Pitfalls](#common-pitfalls)
@@ -68,6 +78,12 @@ To copy this key to an RCAC cluster, use the following command:
 ssh-copy-id $USER@$CLUSTER_NAME.rcac.purdue.edu
 ```
 
+To copy to nano or cocosys, use the following command:
+
+```
+ssh-copy-id $USER@$CLUSTER_NAME.ecn.purdue.edu
+```
+
 Verify your credentials using BoilerKey, and you're good to go! Logging in to the cluster now requires just your ssh key instead of BoilerKey+Duo!<br>
 <b>NOTE:</b> Windows users may use the following command in PowerShell to emulate the function of ssh-copy-id:
 
@@ -87,11 +103,13 @@ Navigate to the repo and perform initial setup using
 cd $PATH_TO_REPO
 bash setup.bash
 ```
-NOTE: For path invariance, the setup script will automatically move the cloned repo to your home directory (<code>/home/$USER</code>)
+NOTE: For path invariance, the setup script will automatically move the cloned repo to your home directory (<code>/home/$USER</code> on Gautschi, <code>/home/nano01/a/$USER</code> on nano, and <code>/home/cocosys0X/a/$USER</code> on cocosys0X)
 
 ## Scripts
 
 #### Conda Setup
+##### NOTE: This subsection is only meant for use on Gautschi. For nano, please create your own conda installation.
+
 RCAC clusters require use of the IT-managed conda module loadable using Lmod. While installing conda locally in your own directory <code>/home/$USER/</code> is possible, environments installed using your own conda installation will not be importable in code, i.e., they will not work.
 
 To transfer existing environments from other machines onto RCAC clusters, on the other machine, export the env as a yml file using
@@ -133,34 +151,41 @@ More info on the <code>srun</code>, <code>salloc</code> and <code>sbatch</code> 
 Launching a job requires the creation of a "Job Submission Script", a template of which is provided here as <code>jobsubmissionscript.sub</code>. A detailed list of command line args accepted by this script may be found using
 
 ```
-bash jobsubmissionscript.sub -h
+bash jobsubmissionscript.slurm -h
 ```
-NOTE: The Job Submission Script is not required to have the extension '.sub'. '.bash', '.sh', '.slurm' are some other acceptable extensions.<br>
+NOTE: The Job Submission Script is not required to have the extension '.slurm'. '.bash', '.sh', '.sub' are some other acceptable extensions.<br>
 NOTE: It is not necessary for a job submission script to accept command line arguments. The template file provides this functionality just for convenience.
 
 A Job Submission Script is supposed to do three main things:
 <ol>
-  <li>Load all necessary Lmod modules. A list of available modules may be found using:
+	<li>Load all necessary Lmod modules. A list of available modules may be found using:
 
-  ```
-  module avail
-  ```
-  </li>
-  <li>Activate the necessary conda environment
-  
-  ```
-  conda activate $ENV_NAME
-  ```
-  </li>
-  <li>Call the job script
-  
-  ```
-  python helloWorld.py
-  ```
-  NOTE: SLURM provides functionality to send an OS signal to a job "n" seconds before termination (n $\in [0, 65535]$). This functionality is enabled by default (See the minimum working example given in the script helloWorld.py)
-  </li>
+	```
+	module avail
+	```
+	</li>
+	<li>Activate the necessary conda environment
+
+	```
+	conda activate $ENV_NAME
+	```
+	</li>
+	<li>Call the job script
+
+	```
+	python helloWorld.py
+	```
+	NOTE: SLURM provides functionality to send an OS signal to a job "n" seconds before termination (n $\in [0, 65535]$). This functionality is enabled by default (See the minimum working example given in the script helloWorld.py)
+	</li>
 </ol>
 More information on job submission scripts, specifically for RCAC clusters, may be found <a href="https://www.rcac.purdue.edu/knowledge/gautschi/run/slurm/script">here</a>.
+
+#### Array Job Submission Script
+SLURM provides functionality to launch the same job script multiple times with different arguments, such that only a predefined maximum number of jobs may be active at given time. This is accomplished by means of an "arrayed job". A template of an arrayed job submission script is provided here as <code>jobsubmission_array.slurm</code>. A detailed list of command line args accepted by this script may be found using
+
+```
+bash jobsubmission_array.slurm -h
+```
 
 #### Monitoring Jobs
 Launched jobs can be monitored using the <code>monitor.bash</code> file. A detailed list of command line args accepted by this script may be found using
@@ -173,16 +198,16 @@ For more info about the commands used by this script, visit <a href="https://slu
 #### Backing Up Files
 The recommended file organisation on RCAC clusters is as follows:
 <ol>
-    <li> Code files and other important results: Your home directory (<code>/home/$USER</code>)</li>
-    <li> Datasets and other large files: Your scratch directory (<code>/scratch/$CLUSTER_NAME/$USER/</code>)
-    <li> Temporary/code-generated files: The temporary directory (<code>/tmp/</code>). For the dos and don'ts of <code>/tmp/</code>, read <a href="https://www.rcac.purdue.edu/knowledge/gautschi/storage/options/tmp">this</a></li>
+	<li> Code files and other important results: Your home directory (<code>/home/$USER</code>)</li>
+	<li> Datasets and other large files: Your scratch directory (<code>/scratch/$CLUSTER_NAME/$USER/</code>)
+	<li> Temporary/code-generated files: The temporary directory (<code>/tmp/</code>). For the dos and don'ts of <code>/tmp/</code>, read <a href="https://www.rcac.purdue.edu/knowledge/gautschi/storage/options/tmp">this</a></li>
 </ol>
 It is advisable to backup all code, result, and render files. Files can be backed up to FORTRESS, which is a tape-based backup media managed by Purdue IT. Since FORTRESS relies on tape, it is recommended to group large files into a tar archive before pushing them to FORTRESS. The provided script can do this automatically.
 
 By default, backups in FORTRESS are saved in your FORTRESS home directory (<code>/home/$USER/</code>). For convenience, we impose the following path organisation:
 <ol>
-    <li> All tar archives are to be saved in <code>/home/$USER/archives/</code> </li>
-    <li> All other files (note that these should only be large files such as datasets, model weights, etc.) are to be saved in <code>/home/$USER/largeFiles/</code> </li>
+	<li> All tar archives are to be saved in <code>/home/$USER/archives/</code> </li>
+	<li> All other files (note that these should only be large files such as datasets, model weights, etc.) are to be saved in <code>/home/$USER/largeFiles/</code> </li>
 </ol>
 You are free to use whatever directory structure you want inside these two directories.
 

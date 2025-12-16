@@ -38,7 +38,7 @@ ARCHIVE_PATH=/home/${USER}/archives/
 shopt -s nullglob
 
 # necessary loading. DO NOT MODIFY
-source config_rcac.bash
+source config_slurm.bash
 
 # usage help message
 usage() {

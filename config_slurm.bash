@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 
-# FILENAME:  config_rcac
+# FILENAME:  config_slurm
 
 
 # Text colour escape codes. DO NOT MODIFY
@@ -32,10 +32,23 @@ yellow='\033[1;33m'
 nc='\033[0m'
 
 # system constants. DO NOT MODIFY
-QUEUE=cocosys
 USER=$(whoami)
-CONFIG_PATH=/home/${USER}/rcac-utils
+
+#
 CLUSTER=$(echo $(hostname) | cut -d '.' -f 2)
+if [[ "gautschi" == *"$CLUSTER"* ]]; then
+	CONFIG_PATH=/home/${USER}/rcac-utils
+	QUEUE=cocosys
+else
+	CLUSTER=$(echo $(hostname) | cut -d'.' -f 1)
+	if [[ "cocosys" == *"$CLUSTER"* ]]; then
+		CONFIG_PATH=/scratch/${CLUSTER}/a/${USER}/rcac-utils
+		QUEUE=batch
+	else
+		CONFIG_PATH=/home/${CLUSTER}/a/${USER}/rcac-utils
+		QUEUE=batch
+	fi
+fi
 
 # Cluster constants. DO NOT MODIFY
 # Gautschi CPU cores/node
@@ -54,3 +67,27 @@ gautschi_gpu_cpu=0
 gautschi_gpu_highmem=0
 gautschi_gpu_smallgpu=2
 gautschi_gpu_profiling=0
+
+# Cluster constants. DO NOT MODIFY
+# Nano CPU cores/node
+nano01_cpu_batch=40
+nano02_cpu_batch=40
+nano03_cpu_batch=40
+nano04_cpu_batch=40
+nano05_cpu_batch=40
+nano06_cpu_batch=40
+nano12_cpu_batch=40
+cocosys01_cpu_batch=512
+cocosys02_cpu_batch=512
+
+# Cluster constants. DO NOT MODIFY
+# Nano GPU cards per node
+nano01_gpu_batch=0
+nano02_gpu_batch=0
+nano03_gpu_batch=0
+nano04_gpu_batch=0
+nano05_gpu_batch=0
+nano06_gpu_batch=0
+nano12_gpu_batch=0
+cocosys01_gpu_batch=0
+cocosys02_gpu_batch=0
