@@ -36,12 +36,12 @@ USER=$(whoami)
 
 #
 CLUSTER=$(echo $(hostname) | cut -d '.' -f 2)
-if [[ "gautschi" == *"$CLUSTER"* ]]; then
+if [[ $CLUSTER == *"gautschi"* ]]; then
 	CONFIG_PATH=/home/${USER}/rcac-utils
 	QUEUE=cocosys
 else
 	CLUSTER=$(echo $(hostname) | cut -d'.' -f 1)
-	if [[ "cocosys" == *"$CLUSTER"* ]]; then
+	if [[ $CLUSTER == *"cocosys"* ]]; then
 		CONFIG_PATH=/scratch/${CLUSTER}/a/${USER}/rcac-utils
 		QUEUE=batch
 	else

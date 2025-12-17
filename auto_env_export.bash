@@ -27,7 +27,7 @@ source /etc/profile.d/modules.sh
 module purge
 
 CLUSTER=$(echo $(hostname) | cut -d '.' -f 2)
-if [[ "gautschi" == *"$CLUSTER"* ]]; then
+if [[ $CLUSTER == *"gautschi"* ]]; then
 	INSTALL_DIR=/home/${USER}
     module load conda
 else

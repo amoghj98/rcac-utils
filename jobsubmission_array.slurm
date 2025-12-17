@@ -26,7 +26,7 @@
 #SBATCH -A cocosys
 #SBATCH --nodes=1 
 #SBATCH --time=6:00:00
-#SBATCH --job-name=DEFAULT
+#SBATCH --job-name=%u_%j
 #SBATCH --array=1-20%5                  # Array range (this creates 20 tasks with IDs from 1 to 20, with max 5 tasks concurrently. Set number of tasks to total number of iterations in loop, 20 in this case)
 #SBATCH --gpus-per-node=1
 #SBATCH --output=/home/%u/joboutput/%u_%A_%a.log
@@ -38,7 +38,7 @@
 # DO NOT MODIFY THESE SPECIAL COMMENTS
 
 # handle job renaming for default name jobs
-if [[ $SLURM_JOB_NAME == "DEFAULT" ]]; then
+if [[ $SLURM_JOB_NAME == "%u_%j" ]]; then
 	scontrol update job=$SLURM_JOB_ID JobName=$(whoami)_$SLURM_JOB_ID
 fi
 

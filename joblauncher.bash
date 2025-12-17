@@ -42,7 +42,7 @@ INTERACTIVE=""
 
 # file name setup
 JOB_NAME=""
-if [[ "gautschi" == *"$CLUSTER"* ]]; then
+if [[ $CLUSTER == *"gautschi"* ]]; then
 	LOG_PATH="${HOME}/joboutput"
 else
 	LOG_PATH="${CONFIG_PATH::-11}/joboutput"
@@ -132,7 +132,7 @@ if [[ ! " ${SUPPORTED_SCRIPTS[@]} " =~ " $SCRIPT_TYPE " ]]; then
 	exit 1
 fi
 
-if [[ "gautschi" == *"$CLUSTER"* ]]; then
+if [[ $CLUSTER == *"gautschi"* ]]; then
 	SUPPORTED_QUEUES=("kaushik" "cocosys")
 	SUPPORTED_QOS_LEVELS=("normal" "preemptible")
 	SUPPORTED_PARTITIONS=("cocosys" "highmem")
@@ -180,7 +180,7 @@ fi
 DIV=$((${CLUSTER}"_cpu_"${PARTITION}))
 N_NODES=$(((($N_CPUS+$DIV-1))/$DIV))
 
-if [[ "gautschi" == *"$CLUSTER"* ]]; then
+if [[ $CLUSTER == *"gautschi"* ]]; then
 	# control requested CPU count
 	if [[ $N_GPUS -gt 0 ]]; then
 		REQ_CPUS_PER_GPU=$(($N_CPUS/$N_GPUS))
@@ -222,12 +222,12 @@ else
 		exit 1
 	fi
 	# upper bound cpu request on nanos
-	if [[ "nano" == *"$CLUSTER"* ]] && [[ $N_CPUS -gt 40 ]]; then
+	if [[ $CLUSTER == *"nano"* ]] && [[ $N_CPUS -gt 40 ]]; then
 		echo -e "[${red}FATAL${nc}] nano clusters only have 40 CPU cores each. Reduce CPU request to <= 40 and retry."
 		exit 1
 	fi
 	# soft restrictions on cocosys clusters (enforce only 256 core restriction here, other restrictions based on priority will be enforced by mgmt scripts)
-	if [[ "cocosys" == *"$CLUSTER"* ]] && [[ $N_CPUS -gt 256 ]]; then
+	if [[ $CLUSTER == *"cocosys"* ]] && [[ $N_CPUS -gt 256 ]]; then
 		echo -e "[${red}FATAL${nc}] Jobs on CoCoSys HPC clusters can not request more than 256 CPU cores. Reduce CPU request and retry."
 		exit 1
 	fi
@@ -266,7 +266,7 @@ USR_SPEC_ERR_NAME="--error=${ERR_FILE}"
 #	-A [QUEUE] : Name of queue to submit job to. H200s are accessed using queue "cocosys". NRL's private queue is named "kaushik"
 #
 #	For more info about sbatch, consult the sbatch man page using "man sbatch"
-if [[ "gautschi" == *"$CLUSTER"* ]]; then
+if [[ $CLUSTER == *"gautschi"* ]]; then
 	if [[ ! $INTERACTIVE ]]; then
 		sbatch \
 			-p $PARTITION -q $QOS_LEVEL \
