@@ -58,10 +58,10 @@ usage() {
 	echo -e "-f SCRIPT_FILE: Name of python file to run. Defaults to helloWorld.py"
 	echo -e "-l LOG_PATH: Absolute path to logging directory. Defaults to ${HOME}/joboutput\n\t[${yellow}WARNING${nc}] Custom log path MUST be specified along with a custom job name"
 	echo -e "-e ENV_NAME: Name of the script's conda environment. Defaults to 'base'" 
-	echo -e "-n JOB_NAME: Name of the job. Defaults to ${USER}_%j, where %j is the job number\n\t[${green}NOTE${nc}] Jobs launched without a custom name will be named 'DEFAULT' until they are launched"
+	echo -e "-n JOB_NAME: Name of the job. Defaults to ${USER}_%j, where %j is the job number\n\t[${green}NOTE${nc}] Jobs launched without a custom name will be named '%u_%j' until they are launched"
 	echo -e "-g N_GPUS: Number of GPU cards required. Defaults to 1"
 	echo -e "-c N_CPUS: Number of CPUs required. Defaults to 14.\n\t[${yellow}WARNING${nc}] Gautschi restricts N_CPUS to 14 per requested GPU. Supply this arg accordingly"
-	echo -e "-q QUEUE: SLURM queue to launch job on. Supported values: kaushik, cocosys. Defaults to 'cocosys'"
+	echo -e "-q QUEUE: SLURM queue to launch job on. Supported values: kaushik, batch, cocosys. Defaults to 'cocosys'"
 	echo -e "-Q QoS: Quality-of-Service to be associated with the job. Supported values: normal, preemptible. Defaults to 'normal'"
 	echo -e "-p PARTITION: Name of partition to run on. Defaults to 'cocosys'"
 	echo -e "-T MAX_TIME: Max job time. After executing for this much time, the job is killed.\n\tSpecify in dd-hh:mm:ss format. Defaults to 6:00:00 (6 hrs)"
@@ -140,8 +140,8 @@ if [[ $CLUSTER == *"gautschi"* ]]; then
 else
 	SUPPORTED_QUEUES=("batch")
 	SUPPORTED_QOS_LEVELS=("normal")
-	SUPPORTED_PARTITIONS=("batch")
-	CPU_ONLY_PARTITIONS=("batch")
+	SUPPORTED_PARTITIONS=("batch" "cocosys")
+	CPU_ONLY_PARTITIONS=("batch" "cocosys")
 	N_GPUS=$((0))
 fi
 
@@ -161,7 +161,7 @@ if [[ ! " ${SUPPORTED_PARTITIONS[@]} " =~ " $PARTITION " ]]; then
 	exit 1
 fi
 
-if [[ ! $QUEUE == "cocosys" ]] && [[ $PARTITION == "cocosys" ]]; then
+if [[ ! $QUEUE == "cocosys" ]] && [[ $PARTITION == "cocosys" ]] && [[ $CLUSTER == *"gautschi"* ]]; then
 	echo -e "[${red}FATAL${nc}] Jobs on partition 'cocosys' must be launched from queue 'cocosys'!"
 	exit 1
 fi
