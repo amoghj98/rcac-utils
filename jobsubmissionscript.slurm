@@ -27,7 +27,7 @@
 #SBATCH -A cocosys
 #SBATCH --nodes=1 
 #SBATCH --time=6:00:00
-#SBATCH --job-name=DEFAULT
+#SBATCH --job-name=%u_%j
 #SBATCH --gpus-per-node=1
 #SBATCH --output=/home/%u/joboutput/%u_%j.log
 #SBATCH --error=/home/%u/joboutput/%u_%j.log
@@ -87,7 +87,7 @@ while getopts "he:t:d:f:" opts; do
 done
 
 # necessary init
-if [[ "gautschi" == *"$CLUSTER"* ]]; then
+if [[ $CLUSTER == *"gautschi"* ]]; then
 	module purge
 	module load conda
 	module load cuda

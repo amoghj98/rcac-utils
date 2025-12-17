@@ -40,14 +40,14 @@ source /etc/profile.d/modules.sh
 #
 CLUSTER=$(echo $(hostname) | cut -d '.' -f 2)
 echo -ne "Parsing paths...\t\t\t\t"
-if [[ "gautschi" == *"$CLUSTER"* ]]; then
+if [[ $CLUSTER == *"gautschi"* ]]; then
 	module purge
 	module load conda
 	module load cuda
 	INSTALL_DIR=$(find $HOME -name rcac-utils)
 else
 	CLUSTER=$(echo $(hostname) | cut -d '.' -f 1)
-	if [[ "cocosys" == *"$CLUSTER"* ]]; then
+	if [[ $CLUSTER == *"cocosys"* ]]; then
 		INSTALL_DIR=$(find /scratch/${CLUSTER}/a/${USER} /home/min/a/${USER} -name rcac-utils 2>/dev/null -print -quit)
 	else
 		INSTALL_DIR=$(find /home/${CLUSTER}/a/${USER} /home/min/a/${USER} -name rcac-utils 2>/dev/null -print -quit)
@@ -58,15 +58,15 @@ echo -e "[${green}DONE${nc}]"
 # verify installation
 echo -ne "Verifying rcac-utils installation...\t\t"
 
-if [[ "gautschi" == *"$CLUSTER"* ]]; then
+if [[ $CLUSTER == *"gautschi"* ]]; then
 	if [[ ! $INSTALL_DIR == "/home/${USER}/rcac-utils" ]]; then
 		echo -ne "\n[\033[1;33mWARNING\033[0m] Invalid Path spec: rcac-utils not installed in /home/${USER}. Moving...\t"
 		mv $INSTALL_DIR /home/${USER}
 	fi
 	INSTALL_DIR=/home/${USER}
-elif [[ "cocosys" == *"$CLUSTER"* ]]; then
+elif [[ $CLUSTER == *"cocosys"* ]]; then
 	if [[ ! $INSTALL_DIR == "/scratch/${CLUSTER}/a/${USER}/rcac-utils" ]]; then
-		echo -ne "\n[\033[1;33mWARNING\033[0m] Invalid Path spec: rcac-utils not installed in /scratch/${CLUSTER}/a/${USER}. Moving...\t"
+		echo -ne "\n[\033[1;33mWARNING\033[0m] Invalid Path spec: rcac-utils installed here: ${INSTALL_DIR} instead of here: /scratch/${CLUSTER}/a/${USER}. Moving...\t"
 		mv $INSTALL_DIR /scratch/${CLUSTER}/a/${USER}
 	fi
 	INSTALL_DIR=/scratch/${CLUSTER}/a/${USER}
@@ -97,7 +97,7 @@ else
 	echo -e "[${green}INFO${nc}] rcac-utils already in \$PATH. Nothing to do."
 fi
 
-if [[ "gautschi" == *"$CLUSTER"* ]]; then
+if [[ $CLUSTER == *"gautschi"* ]]; then
 	# change default conda dir to prevent home directory from filling up
 	if [[ ! -d /scratch/${CLUSTER}/${USER}/.conda ]]; then
 		echo -ne "Setting up conda directories...\t\t"
@@ -128,7 +128,7 @@ if [[ ! -d $INSTALL_DIR/ymls ]]; then
 	mkdir $INSTALL_DIR/ymls
 fi
 
-if [[ "gautschi" == *"$CLUSTER"* ]]; then
+if [[ $CLUSTER == *"gautschi"* ]]; then
 	ssh $USER@login01.gautschi.rcac.purdue.edu 'crontab < $HOME/rcac-utils/.crontab'
 else
 	crontab < $INSTALL_DIR/rcac-utils/.crontab
