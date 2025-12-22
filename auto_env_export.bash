@@ -37,7 +37,7 @@ fi
 
 cd $INSTALL_DIR/rcac-utils
 
-source $HOME/.bashrc
+# source $HOME/.bashrc
 source ./config_slurm.bash
 
 env_array=$(eval "conda env list | cut -d ' ' -f1")
